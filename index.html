@@ -12,7 +12,7 @@
 *{box-sizing:border-box; min-width:0}
 html,body{height:100%}
 body{margin:0;background:var(--bg);color:var(--text);
-     font:15.5px/1.95 -apple-system,system-ui,"Noto Sans KR","Malgun Gothic",Roboto,Arial;
+     font:15.5px/1.95 -apple-system,system-ui,"Noto Sans KR","Noto Sans", "Malgun Gothic",Roboto,Arial;
      -webkit-text-size-adjust:100%; max-width:100vw}
 a{color:#9fbaff; text-decoration:none}
 .wrap{max-width:920px;margin:0 auto;padding:14px}
@@ -24,15 +24,15 @@ a{color:#9fbaff; text-decoration:none}
 .btn.ghost{background:transparent;color:#9fbaff;border:1px solid var(--chipbd)}
 .row{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
 input[type="text"],input[type="password"],select{background:var(--chip);color:var(--text);border:1px solid var(--chipbd);
-   border-radius:12px;padding:9px 12px;font-size:14px;outline:none;min-width:0}
+   border-radius:12px;padding:8px 11px;font-size:14px;outline:none;min-width:0}
 textarea{width:100%;height:240px;background:var(--chip);color:var(--text);border:1px solid var(--chipbd);
    border-radius:12px;padding:12px;font-size:15.5px;font-family:"Noto Sans KR","Malgun Gothic",Roboto,Arial; line-height:1.9; white-space:pre-wrap}
 .tiny{font-size:12px;color:var(--muted)}
 .divider{height:1px;background:var(--bd);margin:14px 0}
 .choices{display:grid; grid-template-columns:1fr 1fr; gap:8px}
 @media (min-width:860px){ .choices{ grid-template-columns:1fr 1fr 1fr; } }
-.chip{border:1px solid var(--chipbd);background:var(--chip);border-radius:12px;padding:9px 12px;
-      font-size:15.5px;line-height:1.28; text-align:center; min-height:36px;
+.chip{border:1px solid var(--chipbd);background:var(--chip);border-radius:12px;padding:8px 10px;
+      font-size:16px;line-height:1.25; text-align:center; min-height:36px;
       white-space:nowrap; word-break:keep-all; overflow:hidden; text-overflow:ellipsis}
 .chip.ok{border-color:var(--ok);box-shadow: inset 0 0 0 2px var(--ok)}
 .chip.no{border-color:var(--bad);box-shadow: inset 0 0 0 2px var(--bad)}
@@ -43,7 +43,7 @@ textarea{width:100%;height:240px;background:var(--chip);color:var(--text);border
 .qwrap{display:flex;flex-direction:column;gap:8px}
 .qtitle{font-weight:800;font-size:17px}
 .qpassage{white-space:pre-wrap; line-height:2.05; letter-spacing:.05px; font-size:17px; border:1px solid var(--chipbd);
-          background:var(--chip); border-radius:12px; padding:12px; height:36vh; overflow:auto}
+          background:var(--chip); border-radius:12px; padding:12px}
 .qpassage mark{background:transparent; color:#fff; border-bottom:3px solid var(--acc2); padding:0 2px}
 .qfooter{display:flex;align-items:center;justify-content:space-between}
 .toast{position:fixed;left:50%;bottom:18px;transform:translateX(-50%);background:#111a;color:#fff;border:1px solid var(--chipbd);
@@ -59,6 +59,15 @@ textarea{width:100%;height:240px;background:var(--chip);color:var(--text);border
 .topbar{display:flex; align-items:center; justify-content:space-between; margin-bottom:8px}
 .topbar .left{display:flex; gap:10px; align-items:center}
 .topbtn{background:transparent;border:1px solid var(--chipbd);color:#9fbaff;border-radius:10px;padding:6px 10px; font-size:13px; white-space:nowrap}
+
+/* modal */
+.modal{position:fixed; inset:0; display:none; align-items:center; justify-content:center; background:rgba(0,0,0,.5); z-index:9998}
+.modal.show{display:flex}
+.modal .box{background:var(--panel); border:1px solid var(--bd); border-radius:14px; padding:16px; width:min(92vw,520px)}
+.gallery{display:none; position:fixed; inset:0; background:rgba(0,0,0,.8); z-index:9997; align-items:center; justify-content:center; flex-direction:column; padding:12px}
+.gallery.show{display:flex}
+.gallery img{ max-width:92vw; max-height:72vh; border-radius:12px; border:1px solid var(--chipbd); background:#000 }
+.gallery .gctrl{ display:flex; gap:8px; margin-top:10px }
 </style>
 </head>
 <body>
@@ -100,26 +109,33 @@ textarea{width:100%;height:240px;background:var(--chip);color:var(--text);border
         <input id="title" type="text" placeholder="제목 입력(상단 바에는 표시만 됨)" style="min-width:220px;flex:1">
       </div>
 
-      <textarea id="src" placeholder="텍스트를 붙여넣고 ‘생성’을 누르세요. (줄바꿈을 그대로 유지합니다)"></textarea>
+      <div class="row tiny" id="imgRow" style="display:none">
+        <input id="imgInput" type="file" accept="image/*" multiple>
+        <span class="tiny" id="imgCount" style="color:#94a3b8">첨부된 이미지 0장</span>
+      </div>
+
+      <textarea id="src" placeholder="텍스트를 붙여넣고 ‘생성’을 누르세요. (줄바꿈과 **볼드** 그대로 유지합니다)"></textarea>
 
       <div class="divider"></div>
 
       <!-- 설정 -->
-      <div>
-        <div class="row tiny"><label><input id="autoTune" type="checkbox" checked> 자동설정 (본문 길이 기반)</label></div>
-        <div class="row tiny">최대 문제 수 <input id="holes" type="number" value="24" min="4" max="120" style="width:80px"> 개</div>
-        <div class="row tiny">문장당 최대 빈칸 <input id="perSent" type="number" value="1" min="1" max="2" style="width:80px"> 개</div>
-        <div class="row tiny">선택지 개수 <input id="nchoice" type="number" value="4" min="2" max="6" style="width:80px"> 개</div>
-        <div class="row tiny">
-          <label><input id="useLLM" type="checkbox"> ChatGPT 사용 (맥락 강화)</label>
-          <input id="llmKey" type="password" placeholder="OpenAI API 키" style="flex:1; min-width:220px">
-          <select id="llmModel">
-            <option value="gpt-4.1-mini">gpt-4.1-mini</option>
-            <option value="gpt-4o-mini">gpt-4o-mini</option>
-          </select>
-        </div>
-        <div id="autoNote" class="tiny" style="color:#94a3b8"></div>
+      <div class="row tiny" style="gap:14px">
+        <label><input id="autoTune" type="checkbox" checked> 자동설정(길이 기반)</label>
+        <label><input id="proLocal" type="checkbox" checked> 고급 로컬 엔진+</label>
+        <label><input id="snippetMode" type="checkbox" checked> 스니펫 모드(양쪽 맥락)</label>
       </div>
+      <div class="row tiny">최대 문제 수 <input id="holes" type="number" value="24" min="4" max="120" style="width:80px"> 개</div>
+      <div class="row tiny">문장당 최대 빈칸 <input id="perSent" type="number" value="1" min="1" max="2" style="width:80px"> 개</div>
+      <div class="row tiny">선택지 개수 <input id="nchoice" type="number" value="4" min="2" max="6" style="width:80px"> 개</div>
+      <div class="row tiny">
+        <label><input id="useLLM" type="checkbox"> ChatGPT 사용 (맥락 강화)</label>
+        <input id="llmKey" type="password" placeholder="OpenAI API 키" style="flex:1; min-width:220px">
+        <select id="llmModel">
+          <option value="gpt-4.1-mini">gpt-4.1-mini</option>
+          <option value="gpt-4o-mini">gpt-4o-mini</option>
+        </select>
+      </div>
+      <div id="autoNote" class="tiny" style="color:#94a3b8"></div>
 
       <div class="divider"></div>
 
@@ -141,6 +157,7 @@ textarea{width:100%;height:240px;background:var(--chip);color:var(--text);border
           <button id="goHome2" class="topbtn" type="button">홈</button>
           <button id="backToEdit" class="topbtn" type="button">설정</button>
           <button id="saveRun" class="topbtn" type="button">진행 저장</button>
+          <button id="showGallery" class="topbtn" type="button">이미지</button>
         </div>
         <b id="quizTitle">Mint</b>
       </div>
@@ -154,6 +171,31 @@ textarea{width:100%;height:240px;background:var(--chip);color:var(--text);border
 
 </div>
 
+<!-- NEW NOTE MODAL -->
+<div id="newModal" class="modal">
+  <div class="box">
+    <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:8px">
+      <b>새 노트 만들기</b>
+      <button id="closeNew" class="btn ghost" type="button">닫기</button>
+    </div>
+    <div class="tiny" style="margin-bottom:8px">사진을 첨부할지 선택하세요.</div>
+    <div class="row">
+      <button id="newTextOnly" class="btn" type="button">텍스트만</button>
+      <button id="newWithImages" class="btn" type="button">사진 첨부</button>
+    </div>
+  </div>
+</div>
+
+<!-- IMAGE GALLERY -->
+<div id="gallery" class="gallery">
+  <img id="gimg" alt="image">
+  <div class="gctrl">
+    <button id="gprev" class="btn ghost" type="button">이전</button>
+    <button id="gnext" class="btn ghost" type="button">다음</button>
+    <button id="gclose" class="btn ghost" type="button">닫기</button>
+  </div>
+</div>
+
 <div id="toast" class="toast">완료</div>
 
 <script>
@@ -165,6 +207,7 @@ function show(name){ for(const k in screens){ screens[k].classList.toggle('show'
 
 // ----- State -----
 let RAW="", QUE=[], TOTAL=0, CORR=0, WRONG=[], currentId=null, sessionId=null;
+let images=[], galleryIdx=0, allowImages=false;
 const titleEl=$('title'), brand=$('brand'), quizTitle=$('quizTitle'), src=$('src');
 const qpassage=$('qpassage'), qpassagePreview=$('qpassagePreview'), choices=$('choices'), choicesPreview=$('choicesPreview');
 const stats=$('stats'), progress=$('progress'), statsPreview=$('statsPreview'), diag=$('diag');
@@ -185,7 +228,8 @@ function renderHome(){
   idx.forEach(n=>{
     const card=document.createElement('div'); card.className='card';
     const badge = hasSession(n.id) ? ' <span class="tiny" style="color:#9fbaff">(이어하기 있음)</span>' : '';
-    const m=document.createElement('div'); m.innerHTML=`<b>${escapeHtml(n.title||'(제목 없음)')}</b>${badge}<div class="tiny">${new Date(n.updated||n.created).toLocaleString()} · ${n.size||0}자</div>`;
+    const imgBadge = n.imgCount? ` · 이미지 ${n.imgCount}장` : '';
+    const m=document.createElement('div'); m.innerHTML=`<b>${escapeHtml(n.title||'(제목 없음)')}</b>${badge}<div class="tiny">${new Date(n.updated||n.created).toLocaleString()} · ${n.size||0}자${imgBadge}</div>`;
     const a=document.createElement('div'); a.style.display='flex'; a.style.gap='6px';
     const open=document.createElement('button'); open.className='btn ghost'; open.textContent='열기'; open.onclick=()=>openNote(n.id);
     const cont=document.createElement('button'); cont.className='btn ghost'; cont.textContent='이어하기'; cont.onclick=()=>resumeSession(n.id); cont.style.display= hasSession(n.id)?'inline-block':'none';
@@ -194,15 +238,21 @@ function renderHome(){
   });
 }
 function escapeHtml(s){ return (s||'').replace(/[&<>"]/g, m=>({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[m])); }
+function safeRich(s){
+  let out=escapeHtml(s||"");
+  out=out.replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>');
+  out=out.replace(/&lt;(b|strong)&gt;/gi,'<$1>').replace(/&lt;\/(b|strong)&gt;/gi,'</$1>');
+  return out;
+}
 
 // ----- Save / Open / Delete -----
 function saveNote(){
   const title=titleEl.value.trim()||'(제목 없음)'; const content=src.value;
   if(!content.trim()){ alert('내용이 비어 있습니다.'); return; }
   let id=currentId; const now=Date.now(); if(!id){ id='n'+now+Math.random().toString(16).slice(2); currentId=id; }
-  const rec={id,title,content,created:now,updated:now,size:content.length};
+  const rec={id,title,content,images,allowImages,created:now,updated:now,size:content.length};
   localStorage.setItem('note_'+id, JSON.stringify(rec));
-  const idx=getIndex().filter(x=>x.id!==id); idx.push({id,title,created:rec.created,updated:rec.updated,size:rec.size});
+  const idx=getIndex().filter(x=>x.id!==id); idx.push({id,title,created:rec.created,updated:rec.updated,size:rec.size,imgCount:images.length});
   setIndex(idx); toast('저장됨'); renderHome();
 }
 function deleteNote(id){
@@ -212,14 +262,17 @@ function deleteNote(id){
   localStorage.removeItem('cloze_wrong_'+id);
   localStorage.removeItem('session_'+id);
   const idx=getIndex().filter(x=>x.id!==id); setIndex(idx);
-  if(currentId===id){ currentId=null; titleEl.value=''; src.value=''; }
+  if(currentId===id){ currentId=null; titleEl.value=''; src.value=''; images=[]; $('imgCount').textContent='첨부된 이미지 0장'; }
   renderHome(); toast('삭제됨');
 }
 function openNote(id){
   const rec=JSON.parse(localStorage.getItem('note_'+id)||'null');
   if(!rec){ alert('노트를 찾을 수 없습니다.'); return; }
   currentId=id; titleEl.value=rec.title||''; src.value=rec.content||'';
+  images=rec.images||[]; allowImages=!!rec.allowImages;
   RAW=""; QUE=[]; TOTAL=0; CORR=0; WRONG=[];
+  $('imgRow').style.display = allowImages? 'flex':'none';
+  $('imgCount').textContent = `첨부된 이미지 ${images.length}장`;
   brand.textContent=rec.title||'Mint'; quizTitle.textContent=brand.textContent;
   qpassagePreview.textContent='여기에 빈칸 지문이 표시됩니다.'; choicesPreview.innerHTML=''; statsPreview.textContent='';
   setDiag('노트 로드됨'); show('edit');
@@ -229,26 +282,19 @@ $('deleteBtn').onclick=()=>{ if(currentId){ deleteNote(currentId); show('home');
 // ----- Session (autosave/restore) -----
 function makeSessionId(){
   if(currentId) return 'session_'+currentId;
-  // unsaved: derive from title+content hash
   const t=(titleEl.value||'').slice(0,64), c=(src.value||'').slice(0,256);
   let h=0, s=t+'|'+c; for(let i=0;i<s.length;i++){ h=((h<<5)-h)+s.charCodeAt(i); h|=0; }
   return 'session_tmp_'+(h>>>0);
 }
-function hasSession(noteId){
-  const key='session_'+noteId;
-  return !!localStorage.getItem(key);
-}
+function hasSession(noteId){ return !!localStorage.getItem('session_'+noteId); }
 function saveSession(){
   if(!RAW || !QUE) return;
   sessionId = makeSessionId();
   const payload={ id:sessionId, noteId:currentId||null, title:titleEl.value||'Mint', raw:RAW, que:QUE, total:TOTAL, corr:CORR,
-                  nchoice:+$('nchoice').value||4, ts:Date.now() };
+                  nchoice:+$('nchoice').value||4, ts:Date.now(), images, allowImages };
   try{ localStorage.setItem(sessionId, JSON.stringify(payload)); toast('진행 저장됨'); }catch(e){}
 }
-function clearSession(){
-  if(!sessionId) sessionId=makeSessionId();
-  localStorage.removeItem(sessionId);
-}
+function clearSession(){ if(!sessionId) sessionId=makeSessionId(); localStorage.removeItem(sessionId); }
 function tryResumePrompt(){
   const key=currentId? 'session_'+currentId : makeSessionId();
   const s=localStorage.getItem(key);
@@ -256,7 +302,8 @@ function tryResumePrompt(){
   if(confirm('이전에 진행하던 문제가 있습니다. 이어서 할까요?')){
     const payload=JSON.parse(s);
     RAW=payload.raw; QUE=payload.que||[]; TOTAL=payload.total||0; CORR=payload.corr||0;
-    brand.textContent=payload.title||'Mint'; quizTitle.textContent=brand.textContent;
+    images=payload.images||[]; allowImages=!!payload.allowImages;
+    brand.textContent=payload.title||'Mint'; quizTitle.textContent=payload.title||'Mint';
     show('quiz'); renderNext(); setTimeout(()=>toast('이어하기 로드됨'), 10);
     return true;
   }
@@ -269,107 +316,215 @@ function resumeSession(noteId){
   currentId=noteId;
   titleEl.value=payload.title||''; src.value=payload.raw||'';
   RAW=payload.raw; QUE=payload.que||[]; TOTAL=payload.total||0; CORR=payload.corr||0;
-  brand.textContent=payload.title||'Mint'; quizTitle.textContent=brand.textContent;
+  images=payload.images||[]; allowImages=!!payload.allowImages;
+  brand.textContent=payload.title||'Mint'; quizTitle.textContent=payload.title||'Mint';
   show('quiz'); renderNext(); toast('이어하기 로드됨');
 }
 
-// ===== Cloze Engine (v28b logic 유지: 5W1H + 문장 커버리지) =====
+// ===== Advanced Cloze Engine =====
 const STOP=new Set((`가 각 또한 그리고 그러나 그래서 그런데 또는 및 즉 따라서 하지만 이는 이를 이가 그의 그녀 그들
 은 는 이 가 을 를 의 에 에서 으로 와 과 도 만 보다 처럼 대해 대한 대해서 등이 등등 있다 없다 하다 되다 a an the and or but so of to in on at for with from by as is are was were be been being this that those these it its their them they he she we you`).trim().split(/\s+/));
 const JOSA=['으로써','으로서','이지만','지만','이라도','라도','이나','나','이며','에서','에게','께서','부터','까지','처럼','보다','만큼','조차','마저','밖에','으로','로','이고','이며','과','와','을','를','은','는','이','가','의','도','만','랑','하고','동안','후에','이후','이전에','때','동안에'];
-const MARKERS=['에서','동안','이후','이전에','후에','초기에','말기에','때','때에','을 통해','를 통해','함으로써','하여','방법으로','먼저','우선','다음','그리고 나서','마지막으로','결국','때문에','따라서','그래서','그 결과','결과적으로','으로 인해','로 인해','위해','목적','이유','원인'];
-const WHO_SUFFIX=['팀','기관','위원회','정부','회사','학자','연구소','교수','박사','학생','세포','효소','단백질','유전자','염색체','기관','조직','장기','핵','막','세균','바이러스'];
-const TIME_HINT=/\b(\d{1,4}\s*(년|월|일|시|분))\b|초기|말기|중기|봄|여름|가을|겨울/;
-const METHOD_HINT=/방법|방식|절차|기법|경로|수단/;
+const FIVEW1H_HINTS=['누가','무엇이','언제','어디서','왜','어떻게','who','what','when','where','why','how'];
 const PROC=/진행|형성|발생|거쳐|포함|구성|조절|촉진|억제|전달|분해|합성|변환|흡수|배출|분열|결합|작용|영향|유발|개시|종결/;
+const METHOD=/방법|방식|절차|기법|경로|수단/;
+const TIME=/\b(\d{1,4}\s*(년|월|일|시|분))\b|초기|말기|중기|봄|여름|가을|겨울/;
 
-function stripPunct(t){return t.replace(/^[\s\"'“”‘’()\[\]{},.?!;:]+|[\s\"'“”‘’()\[\]{},.?!;:]+$/g,'');}
-function stripJosa(w){let t=stripPunct(w); for(const s of JOSA.sort((a,b)=>b.length-a.length)){ if(t.length>s.length && t.endsWith(s)) { t=t.slice(0,-s.length); break; } } return t;}
+// split sentences
 function sentencesIdx(text){
   const seps=/[\.?!\n\r。！？…]/g; const idxs=[0]; let m;
   while((m=seps.exec(text))){ idxs.push(m.index+1); }
   idxs.push(text.length);
   const out=[]; for(let i=0;i<idxs.length-1;i++){ out.push([idxs[i], idxs[i+1]]); } return out;
 }
-function tokenizePositions(text){
-  const tokens=[]; const re=/[^\s]+/g; let m;
-  while((m=re.exec(text))){
-    const raw=m[0], start=m.index; const base=stripJosa(raw);
-    const k=base.toLowerCase(); if(!base || base.length<2) continue; if(/\d/.test(k)) continue; if(STOP.has(k)) continue;
-    tokens.push({raw, base, start, end:start+raw.length});
-  }
-  return tokens;
+function stripPunct(t){return t.replace(/^[\s\"'“”‘’()\[\]{},.?!;:]+|[\s\"'“”‘’()\[\]{},.?!;:]+$/g,'');}
+function stripJosa(w){let t=stripPunct(w); for(const s of JOSA.sort((a,b)=>b.length-a.length)){ if(t.length>s.length && t.endsWith(s)) { t=t.slice(0,-s.length); break; } } return t;}
+
+function tokenize(text){
+  // basic whitespace tokenization
+  return text.split(/(\s+)/).filter(Boolean);
 }
-function scoreToken(text, tok){
-  let s=0;
-  const L=120, R=140, st=Math.max(0,tok.start-L), en=Math.min(text.length, tok.end+R);
-  const ctx=text.slice(st,en);
-  if(MARKERS.some(m=>ctx.includes(m))) s+=1.4;
-  if(TIME_HINT.test(ctx)) s+=0.7;
-  if(METHOD_HINT.test(ctx)) s+=0.6;
-  if(/위해|목적|이유|원인|때문/.test(ctx)) s+=0.9;
-  if(PROC.test(ctx)) s+=0.8;
-  if(/[이가은는을를]$/.test(tok.raw)) s+=0.45;
-  if(WHO_SUFFIX.some(suf=>tok.base.endsWith(suf))) s+=0.55;
-  const prevNL=text.lastIndexOf('\n', tok.start); const head=text.slice(prevNL+1, tok.start);
-  if(/^\s*(\d{1,3}[\.|)]|\([0-9]{1,3}\)|[A-Za-z][\.|)]|\([A-Za-z]\))/.test(head)) s+=0.5;
-  if(/[A-Z]/.test(tok.base)) s+=0.35;
-  s += Math.min(1.2, tok.base.length*0.08);
-  return s;
-}
-function buildItems(text, targetCount, maxPerSentence, nChoice){
-  const toks=tokenizePositions(text);
-  const scored=toks.map(t=>({...t,score:scoreToken(text,t)})).sort((a,b)=>b.score-a.score || a.start-b.start);
-  const sents=sentencesIdx(text);
-  function sentBucket(pos){ let i=0; while(i<sents.length && pos>=sents[i][1]) i++; return i; }
-  const per=new Map(), picks=[];
-  for(const t of scored){
-    const b=sentBucket(t.start); const c=per.get(b)||0;
-    if(c>=maxPerSentence) continue;
-    picks.push(t); per.set(b,c+1);
-    if(picks.length>=Math.max(targetCount*2, targetCount+6)) break;
-  }
-  picks.sort((a,b)=>a.start-b.start);
-  const seenPos=new Set(); const final=[];
-  for(const p of picks){
-    const key=p.start+'@'+p.end; if(seenPos.has(key)) continue; seenPos.add(key);
-    final.push({answer:p.base, pos:p.start, len:p.base.length, rawSpan:[p.start,p.end]});
-    if(final.length>=targetCount) break;
-  }
-  // Ensure coverage: at least one blank per sentence
-  const hasBySentence=new Map();
-  final.forEach(it=>{ const b=sentBucket(it.pos); hasBySentence.set(b, (hasBySentence.get(b)||0)+1); });
-  for(let si=0; si<sents.length; si++){
-    if(!hasBySentence.get(si)){
-      const [s,e]=sents[si];
-      const cand=scored.find(t=> t.start>=s && t.start<e && !final.find(f=>f.pos===t.start));
-      if(cand){
-        final.push({answer:cand.base, pos:cand.start, len:cand.base.length, rawSpan:[cand.start,cand.end]});
-        hasBySentence.set(si,1);
-      }
+function tokensToTerms(tokens){
+  // build terms (1-3 token phrases) excluding stop/josa-only
+  const terms=[];
+  for(let i=0;i<tokens.length;i++){
+    for(let len=1; len<=3; len++){
+      const slice=tokens.slice(i, i+len);
+      const raw=slice.join('');
+      if(/\s/.test(raw)) continue; // contiguous only (no spaces)
+      const base=stripJosa(raw);
+      const k=base.toLowerCase();
+      if(!base || base.length<2) continue;
+      if(/\d/.test(k)) continue;
+      if(STOP.has(k)) continue;
+      terms.push({raw, base, startIdx:i, endIdx:i+len});
     }
   }
-  // build distractors
-  const bases=[...new Set(toks.map(t=>t.base))];
+  return terms;
+}
+function termPositions(text, base){
+  // find all positions of base in text (as substring), with word-ish boundaries
+  const out=[]; const re=new RegExp(base.replace(/[.*+?^${}()|[\]\\]/g,'\\$&'), 'g');
+  let m; while((m=re.exec(text))){
+    const s=m.index, e=s+base.length;
+    out.push([s,e]);
+  }
+  return out;
+}
+
+// Simple TextRank-like scoring over terms using co-occurrence in a sliding window
+function scoreTerms(text, terms){
+  const window=8;
+  const nodes=new Map(); // term.base -> {score, freq, pos[]}
+  terms.forEach(t=>{
+    const key=t.base;
+    if(!nodes.has(key)) nodes.set(key,{score:1,freq:0,positions:[]});
+    const n=nodes.get(key);
+    n.freq++; // raw freq
+  });
+  // sentence frequency for "idf-ish"
+  const sents=sentencesIdx(text);
+  const sentHit=new Map();
+  for(const [k,n] of nodes){
+    let hits=0;
+    for(const [s,e] of sents){
+      if(text.slice(s,e).includes(k)) hits++;
+    }
+    sentHit.set(k, Math.max(1,hits));
+  }
+  // Base score
+  for(const [k,n] of nodes){
+    const lenBoost = Math.min(1.4, Math.log2(k.length+1)/1.5);
+    const idf = 1/Math.sqrt(sentHit.get(k)||1);
+    n.score = n.freq * lenBoost * idf;
+  }
+  // 5W1H & method/process/time boosts via context window
+  for(const [k,n] of nodes){
+    const poss=termPositions(text,k);
+    let ctxBoost=0;
+    for(const [s,e] of poss){
+      const L=140, R=160;
+      const ctx=text.slice(Math.max(0,s-L), Math.min(text.length, e+R));
+      if(FIVEW1H_HINTS.some(h=>ctx.includes(h))) ctxBoost+=0.8;
+      if(METHOD.test(ctx)) ctxBoost+=0.6;
+      if(TIME.test(ctx)) ctxBoost+=0.6;
+      if(PROC.test(ctx)) ctxBoost+=0.6;
+      // heading / enumerations
+      const prevNL=text.lastIndexOf('\n', s);
+      const head=text.slice(prevNL+1, s);
+      if(/^\s*(\d{1,3}[\.|)]|\([0-9]{1,3}\)|[A-Za-z][\.|)]|\([A-Za-z]\))/.test(head)) ctxBoost+=0.5;
+    }
+    n.score += Math.min(2.0, ctxBoost);
+  }
+  return nodes;
+}
+
+function chooseItemsAdvanced(text, targetCount, maxPerSentence, nChoice){
+  const toks=tokenize(text);
+  const terms=tokensToTerms(toks);
+  const nodeMap=scoreTerms(text, terms);
+  const ranked=[...nodeMap.entries()].sort((a,b)=>b[1].score-a[1].score);
+  const sents=sentencesIdx(text);
+  function sentBucket(pos){ let i=0; while(i<sents.length && pos>=sents[i][1]) i++; return i; }
+  const usedSpans=[], per=new Map(), items=[];
+  for(const [base,info] of ranked){
+    const poss=termPositions(text, base);
+    for(const [s,e] of poss){
+      const b=sentBucket(s); const c=per.get(b)||0;
+      if(c>=maxPerSentence) continue;
+      // overlap check
+      if(usedSpans.some(([us,ue])=> !(e<=us || s>=ue))) continue;
+      items.push({answer:base, pos:s, len:base.length, rawSpan:[s,e]});
+      usedSpans.push([s,e]); per.set(b,c+1);
+      if(items.length>=targetCount) break;
+    }
+    if(items.length>=targetCount) break;
+  }
+  // ensure at least one per sentence
+  const hasByS=new Map(); items.forEach(it=>{ const b=sentBucket(it.pos); hasByS.set(b,(hasByS.get(b)||0)+1); });
+  for(let si=0; si<sents.length; si++){
+    if(!hasByS.get(si)){
+      const [s,e]=sents[si]; // find highest scoring term within sentence
+      let best=null;
+      for(const [base,info] of ranked){
+        const poss=termPositions(text, base);
+        for(const [ps,pe] of poss){
+          if(ps>=s && pe<=e){
+            if(usedSpans.some(([us,ue])=> !(pe<=us || ps>=ue))) continue;
+            const cand={answer:base,pos:ps,len:base.length,rawSpan:[ps,pe],sc:info.score};
+            if(!best || cand.sc>best.sc) best=cand;
+          }
+        }
+      }
+      if(best){ items.push(best); usedSpans.push(best.rawSpan); hasByS.set(si,1); }
+    }
+  }
+  // distractors pool from other ranked terms of similar length
+  const bases=ranked.map(([b,_])=>b);
   function dsPool(ans){
     const al=ans.length;
-    return bases.filter(b=>b!==ans && Math.abs(b.length-al)<=Math.max(2,Math.floor(al*0.4))).slice(0,30);
+    return bases.filter(b=>b!==ans && Math.abs(b.length-al)<=Math.max(2,Math.floor(al*0.4))).slice(0,40);
   }
-  const items=final.map(it=>{
+  return items.map(it=>{
     const pool=dsPool(it.answer).sort(()=>Math.random()-0.5);
     return {...it, distractors: pool.slice(0, Math.max(1, nChoice-1))};
   });
+}
+
+// legacy (fallback) simple picker (from previous versions)
+function simpleItems(text, targetCount, maxPerSentence, nChoice){
+  const tokens=[]; const re=/[^\s]+/g; let m;
+  while((m=re.exec(text))){
+    const raw=m[0], start=m.index;
+    const base=stripJosa(raw); const k=base.toLowerCase();
+    if(!base || base.length<2) continue; if(/\d/.test(k)) continue; if(STOP.has(k)) continue;
+    tokens.push({raw,base,start,end:start+raw.length});
+  }
+  const scored=tokens.map(t=>{
+    let s= t.base.length*0.08;
+    const L=100, R=120, st=Math.max(0,t.start-L), en=Math.min(text.length,t.end+R);
+    const ctx=text.slice(st,en);
+    if(FIVEW1H_HINTS.some(h=>ctx.includes(h))) s+=0.6;
+    if(METHOD.test(ctx)) s+=0.4;
+    if(TIME.test(ctx)) s+=0.4;
+    if(PROC.test(ctx)) s+=0.4;
+    return {...t,score:s};
+  }).sort((a,b)=>b.score-a.score || a.start-b.start);
+  const sents=sentencesIdx(text);
+  function sentBucket(pos){ let i=0; while(i<sents.length && pos>=sents[i][1]) i++; return i; }
+  const per=new Map(), items=[];
+  for(const t of scored){
+    const b=sentBucket(t.start); const c=per.get(b)||0;
+    if(c>=maxPerSentence) continue;
+    items.push({answer:t.base,pos:t.start,len:t.base.length,rawSpan:[t.start,t.end],distractors:[]});
+    if(items.length>=targetCount) break;
+  }
   return items;
 }
 
-// ----- Quiz Flow -----
-function renderInto(container, raw, item){
-  const before=raw.slice(0, item.pos);
-  const after=raw.slice(item.pos+item.len);
-  container.innerHTML = escapeHtml(before) + '<mark>____</mark>' + escapeHtml(after);
-  const mark=container.querySelector('mark');
-  if(mark){ const top=mark.offsetTop - container.clientHeight/2 + 30; container.scrollTo({top: Math.max(0, top), behavior:'instant'}); }
+// ----- Rendering (with bold & snippet both sides) -----
+function renderRichWithBlank(raw, item, snippet){
+  const before = raw.slice(0, item.pos);
+  const mid    = raw.slice(item.pos, item.pos + item.len);
+  const after  = raw.slice(item.pos + item.len);
+  function clip(s){ return s; }
+  function safe(s){
+    let out=s.replace(/[&<>"]/g, m=>({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[m]));
+    out=out.replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>');
+    out=out.replace(/&lt;(b|strong)&gt;/gi,'<$1>').replace(/&lt;\/(b|strong)&gt;/gi,'</$1>');
+    return out;
+  }
+  if(snippet){
+    const pre = before.slice(-260);
+    const post = after.slice(0,260);
+    const preEll = before.length>pre.length ? '…' : '';
+    const postEll = after.length>post.length ? '…' : '';
+    return preEll + safe(pre) + '<mark>____</mark>' + safe(post) + postEll;
+  }else{
+    return safe(before) + '<mark>____</mark>' + safe(after);
+  }
 }
+
 function renderChoices(container, item, nChoice, onPick){
   container.innerHTML='';
   const opts=[item.answer, ...item.distractors].sort(()=>Math.random()-0.5).slice(0, Math.max(2,nChoice));
@@ -386,71 +541,116 @@ function renderChoices(container, item, nChoice, onPick){
     container.appendChild(el);
   }
 }
+
+// ----- Quiz Flow -----
 function startQuiz(wrongOnly=false){
   const text=src.value.trim(); if(!text){ alert('텍스트를 넣어주세요.'); return; }
   RAW=text; TOTAL=0; CORR=0; WRONG=[];
   const title=titleEl.value.trim()||'Mint'; brand.textContent=title; quizTitle.textContent=title;
   sessionId=null;
-  // resume prompt if session exists
   if(tryResumePrompt()) return;
+
+  // auto tune
+  if($('autoTune').checked){
+    const len=RAW.length;
+    const holes = len<600? 12 : len<1200? 20 : len<2400? 30 : 40;
+    $('holes').value=holes;
+    $('perSent').value = len<1200? 1: 2;
+  }
 
   const maxPerSentence = Math.max(1, Math.min(2, +$('perSent').value||1));
   const hardMax = Math.max(4, Math.min(120, +$('holes').value||24));
   const nChoice = Math.max(2, Math.min(6, +$('nchoice').value||4));
+  const proLocal = $('proLocal').checked;
 
   setDiag('문항 구성…');
-  let items = buildItems(RAW, hardMax, maxPerSentence, nChoice);
-  QUE = items;
-  if(!QUE.length){ alert('만들 수 있는 문항이 없습니다.'); return; }
+  let items = proLocal? chooseItemsAdvanced(RAW, hardMax, maxPerSentence, nChoice)
+                      : simpleItems(RAW, hardMax, maxPerSentence, nChoice);
+
+  if(!items.length){ alert('만들 수 있는 문항이 없습니다.'); return; }
 
   // preview
-  renderInto(qpassagePreview, RAW, QUE[0]);
-  renderChoices(choicesPreview, QUE[0], nChoice, ()=>{});
-  document.getElementById('statsPreview').textContent=`미리보기 · 총 ${QUE.length}문항`;
+  qpassagePreview.innerHTML = renderRichWithBlank(RAW, items[0], $('snippetMode').checked);
+  renderChoices(choicesPreview, items[0], nChoice, ()=>{});
+  $('statsPreview').textContent=`미리보기 · 총 ${items.length}문항`;
 
+  QUE = items;
   show('quiz'); renderNext();
 }
+
 function renderNext(){
-  const choices=document.getElementById('choices');
-  const stats=document.getElementById('stats');
-  const progress=document.getElementById('progress');
-  choices.innerHTML=''; stats.textContent=''; progress.textContent='';
+  const nChoice = Math.max(2, +$('nchoice').value||4);
   if(!QUE.length){
-    document.getElementById('qpassage').innerHTML='<b>끝!</b>'; stats.textContent=`점수 ${CORR}/${TOTAL}`; clearSession(); return;
+    $('qpassage').innerHTML='<b>끝!</b>'; $('stats').textContent=`점수 ${CORR}/${TOTAL}`; $('progress').textContent=''; clearSession(); return;
   }
   const cur=QUE[0];
-  renderInto(document.getElementById('qpassage'), RAW, cur);
-  renderChoices(choices, cur, Math.max(2, +document.getElementById('nchoice').value||4), (correct)=>{
+  $('qpassage').innerHTML = renderRichWithBlank(RAW, cur, $('snippetMode').checked);
+  renderChoices($('choices'), cur, nChoice, (correct)=>{
     TOTAL++; if(correct) CORR++; else WRONG.push(cur);
     QUE.shift(); updateProg(); saveSession(); renderNext();
   });
   updateProg(); saveSession();
 }
-function updateProg(){ document.getElementById('progress').textContent=`${TOTAL+1}/${TOTAL+QUE.length} · 점수 ${CORR}`; }
+function updateProg(){ $('stats').textContent=`정답 ${CORR} / 시도 ${TOTAL}`; $('progress').textContent=`남은 ${QUE.length}`; }
+
+// ----- Image attach & gallery -----
+$('imgInput').addEventListener('change', async (e)=>{
+  const files=[...e.target.files];
+  for(const f of files){
+    const b=await f.arrayBuffer();
+    const base64 = 'data:'+ (f.type||'image/*') + ';base64,' + arrayBufferToBase64(b);
+    images.push({name:f.name, data:base64, type:f.type});
+  }
+  $('imgCount').textContent = `첨부된 이미지 ${images.length}장`;
+  toast('이미지 첨부됨');
+});
+function arrayBufferToBase64(buffer){
+  let binary=''; const bytes=new Uint8Array(buffer);
+  const len=bytes.byteLength; for(let i=0;i<len;i++){ binary += String.fromCharCode(bytes[i]); }
+  return btoa(binary);
+}
+$('showGallery').onclick=()=>{
+  if(!allowImages || !images.length){ alert('첨부된 이미지가 없습니다.'); return; }
+  galleryIdx = Math.max(0, Math.min(galleryIdx, images.length-1));
+  showGalleryIdx(galleryIdx);
+  $('gallery').classList.add('show');
+};
+$('gclose').onclick=()=>$('gallery').classList.remove('show');
+$('gprev').onclick=()=>{ if(images.length){ galleryIdx=(galleryIdx-1+images.length)%images.length; showGalleryIdx(galleryIdx);} };
+$('gnext').onclick=()=>{ if(images.length){ galleryIdx=(galleryIdx+1)%images.length; showGalleryIdx(galleryIdx);} };
+function showGalleryIdx(i){
+  const cur=images[i]; if(!cur) return;
+  $('gimg').src=cur.data; $('gimg').alt=cur.name||('image '+(i+1));
+}
 
 // ----- Navigation -----
-function newNote(){
+function newNoteCore(withImages){
   currentId=null; titleEl.value=''; src.value=''; RAW=""; QUE=[]; TOTAL=0; CORR=0; WRONG=[]; sessionId=null;
+  images=[]; allowImages=!!withImages;
+  $('imgRow').style.display = allowImages? 'flex':'none';
+  $('imgCount').textContent = '첨부된 이미지 0장';
   qpassagePreview.textContent='여기에 빈칸 지문이 표시됩니다.'; choicesPreview.innerHTML=''; statsPreview.textContent='';
   brand.textContent='Mint'; quizTitle.textContent='Mint'; setDiag('새 노트');
   show('edit');
 }
-// manual save progress button
-document.getElementById('saveRun').onclick=()=>saveSession();
+function newNote(){ $('newModal').classList.add('show'); }
+$('newTextOnly').onclick=()=>{ $('newModal').classList.remove('show'); newNoteCore(false); };
+$('newWithImages').onclick=()=>{ $('newModal').classList.remove('show'); newNoteCore(true); };
+$('closeNew').onclick=()=>$('newModal').classList.remove('show');
 
-// wiring
-document.getElementById('newFromHome').onclick=newNote;
-document.getElementById('goHome1').onclick=()=>{ show('home'); renderHome(); };
-document.getElementById('goHome2').onclick=()=>{ show('home'); renderHome(); };
-document.getElementById('backToEdit').onclick=()=>{ show('edit'); };
-document.getElementById('genBtn').onclick=()=> startQuiz(false);
-document.getElementById('saveBtn').onclick=saveNote;
+$('saveRun').onclick=()=>saveSession();
+$('newFromHome').onclick=newNote;
+$('goHome1').onclick=()=>{ show('home'); renderHome(); };
+$('goHome2').onclick=()=>{ show('home'); renderHome(); };
+$('backToEdit').onclick=()=>{ show('edit'); };
+$('genBtn').onclick=()=> startQuiz(false);
+$('saveBtn').onclick=saveNote;
 
 if(!localStorage.getItem('notes_index')) setIndex([]);
 renderHome();
 show('home');
 
-// utils
+// helpers used above defined in scope
 function escapeHtml(s){ return (s||'').replace(/[&<>"]/g, m=>({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[m])); }
 })();
 </script>
