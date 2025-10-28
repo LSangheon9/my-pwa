@@ -12,15 +12,17 @@
 *{box-sizing:border-box; min-width:0}
 html,body{height:100%}
 body{margin:0;background:var(--bg);color:var(--text);
-     font:15.5px/1.95 -apple-system,system-ui,"Noto Sans KR","Noto Sans", "Malgun Gothic",Roboto,Arial;
+     font:15.5px/1.95 -apple-system,system-ui,"Noto Sans KR","Noto Sans","Malgun Gothic",Roboto,Arial;
      -webkit-text-size-adjust:100%; max-width:100vw}
 a{color:#9fbaff; text-decoration:none}
 .wrap{max-width:920px;margin:0 auto;padding:14px}
 .panel{background:var(--panel);border:1px solid var(--bd);border-radius:14px;padding:12px}
 .titlebar{display:flex;align-items:center;justify-content:space-between;margin-bottom:8px}
 .blogo{width:14px;height:14px;border-radius:6px;background:conic-gradient(from 180deg,var(--acc),var(--acc2),var(--acc))}
-.btn{background:linear-gradient(180deg,var(--acc),var(--acc2));color:#fff;border:0;border-radius:12px;
-     padding:9px 12px;font-size:14px;font-weight:800;min-height:36px;cursor:pointer; white-space:nowrap}
+.btn{display:inline-flex;align-items:center;justify-content:center;
+     background:linear-gradient(180deg,var(--acc),var(--acc2));color:#fff;border:0;border-radius:12px;
+     padding:9px 12px;font-size:14px;font-weight:800;min-height:36px;cursor:pointer; 
+     white-space:nowrap; max-width:100%; overflow:hidden; text-overflow:ellipsis}
 .btn.ghost{background:transparent;color:#9fbaff;border:1px solid var(--chipbd)}
 .row{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
 input[type="text"],input[type="password"],select{background:var(--chip);color:var(--text);border:1px solid var(--chipbd);
@@ -28,6 +30,7 @@ input[type="text"],input[type="password"],select{background:var(--chip);color:va
 textarea{width:100%;height:240px;background:var(--chip);color:var(--text);border:1px solid var(--chipbd);
    border-radius:12px;padding:12px;font-size:15.5px;font-family:"Noto Sans KR","Malgun Gothic",Roboto,Arial; line-height:1.9; white-space:pre-wrap}
 .tiny{font-size:12px;color:var(--muted)}
+.badger{font-size:10px;color:#86a1ff}
 .divider{height:1px;background:var(--bd);margin:14px 0}
 .choices{display:grid; grid-template-columns:1fr 1fr; gap:8px}
 @media (min-width:860px){ .choices{ grid-template-columns:1fr 1fr 1fr; } }
@@ -43,7 +46,7 @@ textarea{width:100%;height:240px;background:var(--chip);color:var(--text);border
 .qwrap{display:flex;flex-direction:column;gap:8px}
 .qtitle{font-weight:800;font-size:17px}
 .qpassage{white-space:pre-wrap; line-height:2.05; letter-spacing:.05px; font-size:17px; border:1px solid var(--chipbd);
-          background:var(--chip); border-radius:12px; padding:12px}
+          background:var(--chip); border-radius:12px; padding:12px; height:38vh; overflow:auto}
 .qpassage mark{background:transparent; color:#fff; border-bottom:3px solid var(--acc2); padding:0 2px}
 .qfooter{display:flex;align-items:center;justify-content:space-between}
 .toast{position:fixed;left:50%;bottom:18px;transform:translateX(-50%);background:#111a;color:#fff;border:1px solid var(--chipbd);
@@ -58,7 +61,9 @@ textarea{width:100%;height:240px;background:var(--chip);color:var(--text);border
 /* compact topbar on quiz screen */
 .topbar{display:flex; align-items:center; justify-content:space-between; margin-bottom:8px}
 .topbar .left{display:flex; gap:10px; align-items:center}
-.topbtn{background:transparent;border:1px solid var(--chipbd);color:#9fbaff;border-radius:10px;padding:6px 10px; font-size:13px; white-space:nowrap}
+.topbtn{display:inline-flex;align-items:center;justify-content:center;
+        background:transparent;border:1px solid var(--chipbd);color:#9fbaff;border-radius:10px;padding:6px 10px; font-size:13px; 
+        white-space:nowrap; max-width:100%; overflow:hidden; text-overflow:ellipsis}
 
 /* modal */
 .modal{position:fixed; inset:0; display:none; align-items:center; justify-content:center; background:rgba(0,0,0,.5); z-index:9998}
@@ -122,7 +127,7 @@ textarea{width:100%;height:240px;background:var(--chip);color:var(--text);border
       <div class="row tiny" style="gap:14px">
         <label><input id="autoTune" type="checkbox" checked> 자동설정(길이 기반)</label>
         <label><input id="proLocal" type="checkbox" checked> 고급 로컬 엔진+</label>
-        <label><input id="snippetMode" type="checkbox" checked> 스니펫 모드(양쪽 맥락)</label>
+        <label><input id="snippetMode" type="checkbox"> 스니펫 모드(양쪽 맥락)</label>
       </div>
       <div class="row tiny">최대 문제 수 <input id="holes" type="number" value="24" min="4" max="120" style="width:80px"> 개</div>
       <div class="row tiny">문장당 최대 빈칸 <input id="perSent" type="number" value="1" min="1" max="2" style="width:80px"> 개</div>
@@ -227,12 +232,12 @@ function renderHome(){
   if(!idx.length){ empty.style.display='block'; } else { empty.style.display='none'; }
   idx.forEach(n=>{
     const card=document.createElement('div'); card.className='card';
-    const badge = hasSession(n.id) ? ' <span class="tiny" style="color:#9fbaff">(이어하기 있음)</span>' : '';
+    const badge = hasSession(n.id) ? ' <span class="badger">(이어하기 있음)</span>' : '';
     const imgBadge = n.imgCount? ` · 이미지 ${n.imgCount}장` : '';
     const m=document.createElement('div'); m.innerHTML=`<b>${escapeHtml(n.title||'(제목 없음)')}</b>${badge}<div class="tiny">${new Date(n.updated||n.created).toLocaleString()} · ${n.size||0}자${imgBadge}</div>`;
     const a=document.createElement('div'); a.style.display='flex'; a.style.gap='6px';
     const open=document.createElement('button'); open.className='btn ghost'; open.textContent='열기'; open.onclick=()=>openNote(n.id);
-    const cont=document.createElement('button'); cont.className='btn ghost'; cont.textContent='이어하기'; cont.onclick=()=>resumeSession(n.id); cont.style.display= hasSession(n.id)?'inline-block':'none';
+    const cont=document.createElement('button'); cont.className='btn ghost'; cont.textContent='이어하기'; cont.onclick=()=>resumeSession(n.id); cont.style.display= hasSession(n.id)?'inline-flex':'none';
     const del=document.createElement('button'); del.className='btn ghost'; del.textContent='삭제'; del.onclick=()=>deleteNote(n.id);
     a.append(open,cont,del); card.append(m,a); list.append(card);
   });
@@ -321,7 +326,7 @@ function resumeSession(noteId){
   show('quiz'); renderNext(); toast('이어하기 로드됨');
 }
 
-// ===== Advanced Cloze Engine =====
+// ===== Advanced Cloze (same as v28e) =====
 const STOP=new Set((`가 각 또한 그리고 그러나 그래서 그런데 또는 및 즉 따라서 하지만 이는 이를 이가 그의 그녀 그들
 은 는 이 가 을 를 의 에 에서 으로 와 과 도 만 보다 처럼 대해 대한 대해서 등이 등등 있다 없다 하다 되다 a an the and or but so of to in on at for with from by as is are was were be been being this that those these it its their them they he she we you`).trim().split(/\s+/));
 const JOSA=['으로써','으로서','이지만','지만','이라도','라도','이나','나','이며','에서','에게','께서','부터','까지','처럼','보다','만큼','조차','마저','밖에','으로','로','이고','이며','과','와','을','를','은','는','이','가','의','도','만','랑','하고','동안','후에','이후','이전에','때','동안에'];
@@ -330,7 +335,6 @@ const PROC=/진행|형성|발생|거쳐|포함|구성|조절|촉진|억제|전�
 const METHOD=/방법|방식|절차|기법|경로|수단/;
 const TIME=/\b(\d{1,4}\s*(년|월|일|시|분))\b|초기|말기|중기|봄|여름|가을|겨울/;
 
-// split sentences
 function sentencesIdx(text){
   const seps=/[\.?!\n\r。！？…]/g; const idxs=[0]; let m;
   while((m=seps.exec(text))){ idxs.push(m.index+1); }
@@ -340,18 +344,14 @@ function sentencesIdx(text){
 function stripPunct(t){return t.replace(/^[\s\"'“”‘’()\[\]{},.?!;:]+|[\s\"'“”‘’()\[\]{},.?!;:]+$/g,'');}
 function stripJosa(w){let t=stripPunct(w); for(const s of JOSA.sort((a,b)=>b.length-a.length)){ if(t.length>s.length && t.endsWith(s)) { t=t.slice(0,-s.length); break; } } return t;}
 
-function tokenize(text){
-  // basic whitespace tokenization
-  return text.split(/(\s+)/).filter(Boolean);
-}
+function tokenize(text){ return text.split(/(\s+)/).filter(Boolean); }
 function tokensToTerms(tokens){
-  // build terms (1-3 token phrases) excluding stop/josa-only
   const terms=[];
   for(let i=0;i<tokens.length;i++){
     for(let len=1; len<=3; len++){
       const slice=tokens.slice(i, i+len);
       const raw=slice.join('');
-      if(/\s/.test(raw)) continue; // contiguous only (no spaces)
+      if(/\s/.test(raw)) continue;
       const base=stripJosa(raw);
       const k=base.toLowerCase();
       if(!base || base.length<2) continue;
@@ -363,42 +363,30 @@ function tokensToTerms(tokens){
   return terms;
 }
 function termPositions(text, base){
-  // find all positions of base in text (as substring), with word-ish boundaries
   const out=[]; const re=new RegExp(base.replace(/[.*+?^${}()|[\]\\]/g,'\\$&'), 'g');
   let m; while((m=re.exec(text))){
-    const s=m.index, e=s+base.length;
-    out.push([s,e]);
-  }
-  return out;
+    const s=m.index, e=s+base.length; out.push([s,e]);
+  } return out;
 }
-
-// Simple TextRank-like scoring over terms using co-occurrence in a sliding window
 function scoreTerms(text, terms){
-  const window=8;
-  const nodes=new Map(); // term.base -> {score, freq, pos[]}
+  const nodes=new Map();
   terms.forEach(t=>{
     const key=t.base;
-    if(!nodes.has(key)) nodes.set(key,{score:1,freq:0,positions:[]});
-    const n=nodes.get(key);
-    n.freq++; // raw freq
+    if(!nodes.has(key)) nodes.set(key,{score:1,freq:0});
+    nodes.get(key).freq++;
   });
-  // sentence frequency for "idf-ish"
   const sents=sentencesIdx(text);
   const sentHit=new Map();
   for(const [k,n] of nodes){
     let hits=0;
-    for(const [s,e] of sents){
-      if(text.slice(s,e).includes(k)) hits++;
-    }
+    for(const [s,e] of sents){ if(text.slice(s,e).includes(k)) hits++; }
     sentHit.set(k, Math.max(1,hits));
   }
-  // Base score
   for(const [k,n] of nodes){
     const lenBoost = Math.min(1.4, Math.log2(k.length+1)/1.5);
     const idf = 1/Math.sqrt(sentHit.get(k)||1);
     n.score = n.freq * lenBoost * idf;
   }
-  // 5W1H & method/process/time boosts via context window
   for(const [k,n] of nodes){
     const poss=termPositions(text,k);
     let ctxBoost=0;
@@ -409,7 +397,6 @@ function scoreTerms(text, terms){
       if(METHOD.test(ctx)) ctxBoost+=0.6;
       if(TIME.test(ctx)) ctxBoost+=0.6;
       if(PROC.test(ctx)) ctxBoost+=0.6;
-      // heading / enumerations
       const prevNL=text.lastIndexOf('\n', s);
       const head=text.slice(prevNL+1, s);
       if(/^\s*(\d{1,3}[\.|)]|\([0-9]{1,3}\)|[A-Za-z][\.|)]|\([A-Za-z]\))/.test(head)) ctxBoost+=0.5;
@@ -418,7 +405,6 @@ function scoreTerms(text, terms){
   }
   return nodes;
 }
-
 function chooseItemsAdvanced(text, targetCount, maxPerSentence, nChoice){
   const toks=tokenize(text);
   const terms=tokensToTerms(toks);
@@ -432,7 +418,6 @@ function chooseItemsAdvanced(text, targetCount, maxPerSentence, nChoice){
     for(const [s,e] of poss){
       const b=sentBucket(s); const c=per.get(b)||0;
       if(c>=maxPerSentence) continue;
-      // overlap check
       if(usedSpans.some(([us,ue])=> !(e<=us || s>=ue))) continue;
       items.push({answer:base, pos:s, len:base.length, rawSpan:[s,e]});
       usedSpans.push([s,e]); per.set(b,c+1);
@@ -440,11 +425,10 @@ function chooseItemsAdvanced(text, targetCount, maxPerSentence, nChoice){
     }
     if(items.length>=targetCount) break;
   }
-  // ensure at least one per sentence
   const hasByS=new Map(); items.forEach(it=>{ const b=sentBucket(it.pos); hasByS.set(b,(hasByS.get(b)||0)+1); });
   for(let si=0; si<sents.length; si++){
     if(!hasByS.get(si)){
-      const [s,e]=sents[si]; // find highest scoring term within sentence
+      const [s,e]=sents[si];
       let best=null;
       for(const [base,info] of ranked){
         const poss=termPositions(text, base);
@@ -459,7 +443,6 @@ function chooseItemsAdvanced(text, targetCount, maxPerSentence, nChoice){
       if(best){ items.push(best); usedSpans.push(best.rawSpan); hasByS.set(si,1); }
     }
   }
-  // distractors pool from other ranked terms of similar length
   const bases=ranked.map(([b,_])=>b);
   function dsPool(ans){
     const al=ans.length;
@@ -471,43 +454,10 @@ function chooseItemsAdvanced(text, targetCount, maxPerSentence, nChoice){
   });
 }
 
-// legacy (fallback) simple picker (from previous versions)
-function simpleItems(text, targetCount, maxPerSentence, nChoice){
-  const tokens=[]; const re=/[^\s]+/g; let m;
-  while((m=re.exec(text))){
-    const raw=m[0], start=m.index;
-    const base=stripJosa(raw); const k=base.toLowerCase();
-    if(!base || base.length<2) continue; if(/\d/.test(k)) continue; if(STOP.has(k)) continue;
-    tokens.push({raw,base,start,end:start+raw.length});
-  }
-  const scored=tokens.map(t=>{
-    let s= t.base.length*0.08;
-    const L=100, R=120, st=Math.max(0,t.start-L), en=Math.min(text.length,t.end+R);
-    const ctx=text.slice(st,en);
-    if(FIVEW1H_HINTS.some(h=>ctx.includes(h))) s+=0.6;
-    if(METHOD.test(ctx)) s+=0.4;
-    if(TIME.test(ctx)) s+=0.4;
-    if(PROC.test(ctx)) s+=0.4;
-    return {...t,score:s};
-  }).sort((a,b)=>b.score-a.score || a.start-b.start);
-  const sents=sentencesIdx(text);
-  function sentBucket(pos){ let i=0; while(i<sents.length && pos>=sents[i][1]) i++; return i; }
-  const per=new Map(), items=[];
-  for(const t of scored){
-    const b=sentBucket(t.start); const c=per.get(b)||0;
-    if(c>=maxPerSentence) continue;
-    items.push({answer:t.base,pos:t.start,len:t.base.length,rawSpan:[t.start,t.end],distractors:[]});
-    if(items.length>=targetCount) break;
-  }
-  return items;
-}
-
-// ----- Rendering (with bold & snippet both sides) -----
+// Rendering
 function renderRichWithBlank(raw, item, snippet){
   const before = raw.slice(0, item.pos);
-  const mid    = raw.slice(item.pos, item.pos + item.len);
   const after  = raw.slice(item.pos + item.len);
-  function clip(s){ return s; }
   function safe(s){
     let out=s.replace(/[&<>"]/g, m=>({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[m]));
     out=out.replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>');
@@ -550,14 +500,12 @@ function startQuiz(wrongOnly=false){
   sessionId=null;
   if(tryResumePrompt()) return;
 
-  // auto tune
   if($('autoTune').checked){
     const len=RAW.length;
     const holes = len<600? 12 : len<1200? 20 : len<2400? 30 : 40;
     $('holes').value=holes;
     $('perSent').value = len<1200? 1: 2;
   }
-
   const maxPerSentence = Math.max(1, Math.min(2, +$('perSent').value||1));
   const hardMax = Math.max(4, Math.min(120, +$('holes').value||24));
   const nChoice = Math.max(2, Math.min(6, +$('nchoice').value||4));
@@ -569,7 +517,6 @@ function startQuiz(wrongOnly=false){
 
   if(!items.length){ alert('만들 수 있는 문항이 없습니다.'); return; }
 
-  // preview
   qpassagePreview.innerHTML = renderRichWithBlank(RAW, items[0], $('snippetMode').checked);
   renderChoices(choicesPreview, items[0], nChoice, ()=>{});
   $('statsPreview').textContent=`미리보기 · 총 ${items.length}문항`;
@@ -584,7 +531,15 @@ function renderNext(){
     $('qpassage').innerHTML='<b>끝!</b>'; $('stats').textContent=`점수 ${CORR}/${TOTAL}`; $('progress').textContent=''; clearSession(); return;
   }
   const cur=QUE[0];
-  $('qpassage').innerHTML = renderRichWithBlank(RAW, cur, $('snippetMode').checked);
+  const useSnippet = $('snippetMode').checked;
+  const qp = $('qpassage');
+  qp.innerHTML = renderRichWithBlank(RAW, cur, useSnippet);
+  // center the blank on first render
+  const mark = qp.querySelector('mark');
+  if(mark){
+    const top = mark.offsetTop - (qp.clientHeight/2) + 24;
+    qp.scrollTo({top: Math.max(0, top)});
+  }
   renderChoices($('choices'), cur, nChoice, (correct)=>{
     TOTAL++; if(correct) CORR++; else WRONG.push(cur);
     QUE.shift(); updateProg(); saveSession(); renderNext();
@@ -649,6 +604,37 @@ $('saveBtn').onclick=saveNote;
 if(!localStorage.getItem('notes_index')) setIndex([]);
 renderHome();
 show('home');
+
+// legacy simpleItems (fallback)
+function simpleItems(text, targetCount, maxPerSentence, nChoice){
+  const tokens=[]; const re=/[^\s]+/g; let m;
+  while((m=re.exec(text))){
+    const raw=m[0], start=m.index;
+    const base=stripJosa(raw); const k=base.toLowerCase();
+    if(!base || base.length<2) continue; if(/\d/.test(k)) continue; if(STOP.has(k)) continue;
+    tokens.push({raw,base,start,end:start+raw.length});
+  }
+  const scored=tokens.map(t=>{
+    let s= t.base.length*0.08;
+    const L=100, R=120, st=Math.max(0,t.start-L), en=Math.min(text.length,t.end+R);
+    const ctx=text.slice(st,en);
+    if(FIVEW1H_HINTS.some(h=>ctx.includes(h))) s+=0.6;
+    if(METHOD.test(ctx)) s+=0.4;
+    if(TIME.test(ctx)) s+=0.4;
+    if(PROC.test(ctx)) s+=0.4;
+    return {...t,score:s};
+  }).sort((a,b)=>b.score-a.score || a.start-b.start);
+  const sents=sentencesIdx(text);
+  function sentBucket(pos){ let i=0; while(i<sents.length && pos>=sents[i][1]) i++; return i; }
+  const per=new Map(), items=[];
+  for(const t of scored){
+    const b=sentBucket(t.start); const c=per.get(b)||0;
+    if(c>=maxPerSentence) continue;
+    items.push({answer:t.base,pos:t.start,len:t.base.length,rawSpan:[t.start,t.end],distractors:[]});
+    if(items.length>=targetCount) break;
+  }
+  return items;
+}
 
 // helpers used above defined in scope
 function escapeHtml(s){ return (s||'').replace(/[&<>"]/g, m=>({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[m])); }
