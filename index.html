@@ -21,14 +21,14 @@ a{color:#9fbaff; text-decoration:none}
 .blogo{width:14px;height:14px;border-radius:6px;background:conic-gradient(from 180deg,var(--acc),var(--acc2),var(--acc))}
 .btn{display:inline-flex;align-items:center;justify-content:center;
      background:linear-gradient(180deg,var(--acc),var(--acc2));color:#fff;border:0;border-radius:12px;
-     padding:9px 12px;font-size:14px;font-weight:800;min-height:36px;cursor:pointer; 
+     padding:9px 12px;font-size:14px;font-weight:800;min-height:36px;cursor:pointer;
      white-space:nowrap; max-width:100%; overflow:hidden; text-overflow:ellipsis}
 .btn.ghost{background:transparent;color:#9fbaff;border:1px solid var(--chipbd)}
 .row{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
 input[type="text"],input[type="password"],select{background:var(--chip);color:var(--text);border:1px solid var(--chipbd);
    border-radius:12px;padding:8px 11px;font-size:14px;outline:none;min-width:0}
 textarea{width:100%;height:240px;background:var(--chip);color:var(--text);border:1px solid var(--chipbd);
-   border-radius:12px;padding:12px;font-size:15.5px;font-family:"Noto Sans KR","Malgun Gothic",Roboto,Arial; line-height:1.9; white-space:pre-wrap}
+   border-radius:12px;padding:12px;font-size:15.5px;font-family:"Noto Sans KR","Noto Sans","Malgun Gothic",Roboto,Arial; line-height:1.9; white-space:pre-wrap}
 .tiny{font-size:12px;color:var(--muted)}
 .badger{font-size:10px;color:#86a1ff}
 .divider{height:1px;background:var(--bd);margin:14px 0}
@@ -58,11 +58,12 @@ textarea{width:100%;height:240px;background:var(--chip);color:var(--text);border
 .list{display:grid; grid-template-columns:1fr; gap:10px}
 .card{display:flex;align-items:center;justify-content:space-between;gap:10px;border:1px solid var(--chipbd);background:var(--chip);
       border-radius:12px;padding:10px}
+.card .meta{display:flex; flex-direction:column; gap:4px}
 /* compact topbar on quiz screen */
 .topbar{display:flex; align-items:center; justify-content:space-between; margin-bottom:8px}
 .topbar .left{display:flex; gap:10px; align-items:center}
 .topbtn{display:inline-flex;align-items:center;justify-content:center;
-        background:transparent;border:1px solid var(--chipbd);color:#9fbaff;border-radius:10px;padding:6px 10px; font-size:13px; 
+        background:transparent;border:1px solid var(--chipbd);color:#9fbaff;border-radius:10px;padding:6px 10px; font-size:13px;
         white-space:nowrap; max-width:100%; overflow:hidden; text-overflow:ellipsis}
 
 /* modal */
@@ -129,8 +130,8 @@ textarea{width:100%;height:240px;background:var(--chip);color:var(--text);border
         <label><input id="proLocal" type="checkbox" checked> 고급 로컬 엔진+</label>
         <label><input id="snippetMode" type="checkbox"> 스니펫 모드(양쪽 맥락)</label>
       </div>
-      <div class="row tiny">최대 문제 수 <input id="holes" type="number" value="24" min="4" max="120" style="width:80px"> 개</div>
-      <div class="row tiny">문장당 최대 빈칸 <input id="perSent" type="number" value="1" min="1" max="2" style="width:80px"> 개</div>
+      <div class="row tiny">최대 문제 수 <input id="holes" type="number" value="24" min="4" max="200" style="width:80px"> 개</div>
+      <div class="row tiny">문장당 최대 빈칸 (상한)<input id="perSent" type="number" value="3" min="1" max="6" style="width:80px"> 개</div>
       <div class="row tiny">선택지 개수 <input id="nchoice" type="number" value="4" min="2" max="6" style="width:80px"> 개</div>
       <div class="row tiny">
         <label><input id="useLLM" type="checkbox"> ChatGPT 사용 (맥락 강화)</label>
@@ -225,21 +226,28 @@ $('useLLM').addEventListener('change',updateGPTBadge); $('llmKey').addEventListe
 // ----- Home List -----
 function getIndex(){ try{ return JSON.parse(localStorage.getItem('notes_index')||'[]')||[]; }catch(e){ return []; } }
 function setIndex(arr){ localStorage.setItem('notes_index', JSON.stringify(arr||[])); }
+function hasSession(noteId){ return !!localStorage.getItem('session_'+noteId); }
 function renderHome(){
   const list=$('homeList'), empty=$('homeEmpty');
   const idx=getIndex().sort((a,b)=>(b.updated||b.created)-(a.updated||a.created));
   list.innerHTML='';
   if(!idx.length){ empty.style.display='block'; } else { empty.style.display='none'; }
   idx.forEach(n=>{
-    const card=document.createElement('div'); card.className='card';
-    const badge = hasSession(n.id) ? ' <span class="badger">(이어하기 있음)</span>' : '';
-    const imgBadge = n.imgCount? ` · 이미지 ${n.imgCount}장` : '';
-    const m=document.createElement('div'); m.innerHTML=`<b>${escapeHtml(n.title||'(제목 없음)')}</b>${badge}<div class="tiny">${new Date(n.updated||n.created).toLocaleString()} · ${n.size||0}자${imgBadge}</div>`;
-    const a=document.createElement('div'); a.style.display='flex'; a.style.gap='6px';
+    const wrap=document.createElement('div'); wrap.className='card';
+    const meta=document.createElement('div'); meta.className='meta';
+    const line1=document.createElement('div'); line1.innerHTML=`<b>${escapeHtml(n.title||'(제목 없음)')}</b>`;
+    meta.append(line1);
+    if(hasSession(n.id)){
+      const line2=document.createElement('div'); line2.className='tiny'; line2.textContent='(이어하기 있음)';
+      meta.append(line2);
+    }
+    const right=document.createElement('div'); right.style.display='flex'; right.style.gap='6px';
     const open=document.createElement('button'); open.className='btn ghost'; open.textContent='열기'; open.onclick=()=>openNote(n.id);
     const cont=document.createElement('button'); cont.className='btn ghost'; cont.textContent='이어하기'; cont.onclick=()=>resumeSession(n.id); cont.style.display= hasSession(n.id)?'inline-flex':'none';
     const del=document.createElement('button'); del.className='btn ghost'; del.textContent='삭제'; del.onclick=()=>deleteNote(n.id);
-    a.append(open,cont,del); card.append(m,a); list.append(card);
+    right.append(open,cont,del);
+    wrap.append(meta,right);
+    list.append(wrap);
   });
 }
 function escapeHtml(s){ return (s||'').replace(/[&<>"]/g, m=>({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[m])); }
@@ -291,7 +299,6 @@ function makeSessionId(){
   let h=0, s=t+'|'+c; for(let i=0;i<s.length;i++){ h=((h<<5)-h)+s.charCodeAt(i); h|=0; }
   return 'session_tmp_'+(h>>>0);
 }
-function hasSession(noteId){ return !!localStorage.getItem('session_'+noteId); }
 function saveSession(){
   if(!RAW || !QUE) return;
   sessionId = makeSessionId();
@@ -326,135 +333,174 @@ function resumeSession(noteId){
   show('quiz'); renderNext(); toast('이어하기 로드됨');
 }
 
-// ===== Advanced Cloze (same as v28e) =====
+// ===== Cloze Engine v28f-fix =====
 const STOP=new Set((`가 각 또한 그리고 그러나 그래서 그런데 또는 및 즉 따라서 하지만 이는 이를 이가 그의 그녀 그들
 은 는 이 가 을 를 의 에 에서 으로 와 과 도 만 보다 처럼 대해 대한 대해서 등이 등등 있다 없다 하다 되다 a an the and or but so of to in on at for with from by as is are was were be been being this that those these it its their them they he she we you`).trim().split(/\s+/));
+
 const JOSA=['으로써','으로서','이지만','지만','이라도','라도','이나','나','이며','에서','에게','께서','부터','까지','처럼','보다','만큼','조차','마저','밖에','으로','로','이고','이며','과','와','을','를','은','는','이','가','의','도','만','랑','하고','동안','후에','이후','이전에','때','동안에'];
-const FIVEW1H_HINTS=['누가','무엇이','언제','어디서','왜','어떻게','who','what','when','where','why','how'];
-const PROC=/진행|형성|발생|거쳐|포함|구성|조절|촉진|억제|전달|분해|합성|변환|흡수|배출|분열|결합|작용|영향|유발|개시|종결/;
-const METHOD=/방법|방식|절차|기법|경로|수단/;
-const TIME=/\b(\d{1,4}\s*(년|월|일|시|분))\b|초기|말기|중기|봄|여름|가을|겨울/;
+const VERB_END=['한다','된다','된다','하였다','했다','하며','하여','하면','하도록','되고','되며','되면','되어','되는','시키다','시킨다','촉진한다','억제한다','유발한다','형성한다','전달한다','합성한다','분해한다','저장한다','흡수한다','분비한다','유리한다','전환한다','증가한다','감소한다'];
+const PROCESS_HINT=/촉진|억제|유발|형성|전달|합성|분해|저장|흡수|분비|유리|전환|조절|변화|증가|감소|유지/;
+
+const WHY_HINT=/왜|이유|원인|때문|결과적으로|그 결과|따라서|그래서|결국/;
+const HOW_HINT=/어떻게|방식|방법|절차|경로|수단|과정을 통해|하여|함으로써|촉진|억제|조절|유발|형성|전달|합성|분해|진행/;
+const WHEN_HINT=/언제|초기|중기|말기|동안|이후|이전에|후에|\d{1,4}\s*(년|월|일|시|분)|봄|여름|가을|겨울/;
+const WHERE_HINT=/어디서|어디에서|위치|부위|영역|장기|조직|내에서|밖에서|핵|세포질|혈액|혈관|간|췌장|근육|뇌/;
+const WHO_HINT=/누가|어떤 세포|어떤 호르몬|효소|단백질|기관|조직|세포/;
 
 function sentencesIdx(text){
-  const seps=/[\.?!\n\r。！？…]/g; const idxs=[0]; let m;
+  const seps=/[\.?!\n\r。！？…]/g;
+  const idxs=[0]; let m;
   while((m=seps.exec(text))){ idxs.push(m.index+1); }
   idxs.push(text.length);
-  const out=[]; for(let i=0;i<idxs.length-1;i++){ out.push([idxs[i], idxs[i+1]]); } return out;
+  const out=[];
+  for(let i=0;i<idxs.length-1;i++){
+    const s=idxs[i], e=idxs[i+1];
+    if(e-s<2) continue;
+    out.push([s,e]);
+  }
+  return out;
 }
-function stripPunct(t){return t.replace(/^[\s\"'“”‘’()\[\]{},.?!;:]+|[\s\"'“”‘’()\[\]{},.?!;:]+$/g,'');}
-function stripJosa(w){let t=stripPunct(w); for(const s of JOSA.sort((a,b)=>b.length-a.length)){ if(t.length>s.length && t.endsWith(s)) { t=t.slice(0,-s.length); break; } } return t;}
+function stripPunct(t){
+  return t.replace(/^[\s\"'“”‘’()\[\]{},.?!;:]+|[\s\"'“”‘’()\[\]{},.?!;:]+$/g,'');
+}
+function stripJosa(w){
+  let t=stripPunct(w);
+  const sorted=[...JOSA].sort((a,b)=>b.length-a.length);
+  for(const s of sorted){
+    if(t.length>s.length && t.endsWith(s)){
+      t=t.slice(0,-s.length);
+      break;
+    }
+  }
+  return t;
+}
+function stripVerbEnding(w){
+  let t=w;
+  const sorted=[...VERB_END].sort((a,b)=>b.length-a.length);
+  for(const s of sorted){
+    if(t.length>s.length && t.endsWith(s)){ t=t.slice(0,-s.length); break; }
+  }
+  if(t.endsWith('하다')) t=t.slice(0,-2);
+  if(t.length<=1) t=w;
+  return t;
+}
+function tokenizeWithPos(text, offset){
+  const out=[];
+  const re=/[^\s]+/g;
+  let m;
+  while((m=re.exec(text))){
+    const raw=m[0];
+    out.push({raw,start:offset+m.index,end:offset+m.index+raw.length});
+  }
+  return out;
+}
+function genCandidates(tokens){
+  const out=[];
+  for(const t of tokens){
+    let base=stripJosa(t.raw);
+    base=stripVerbEnding(base);
+    const k=base.toLowerCase();
+    if(!base || base.length<2) continue;
+    if(/\d/.test(k)) continue;
+    if(STOP.has(k)) continue;
+    out.push({raw:t.raw, base, start:t.start, end:t.end});
+  }
+  return out;
+}
 
-function tokenize(text){ return text.split(/(\s+)/).filter(Boolean); }
-function tokensToTerms(tokens){
-  const terms=[];
-  for(let i=0;i<tokens.length;i++){
-    for(let len=1; len<=3; len++){
-      const slice=tokens.slice(i, i+len);
-      const raw=slice.join('');
-      if(/\s/.test(raw)) continue;
-      const base=stripJosa(raw);
-      const k=base.toLowerCase();
-      if(!base || base.length<2) continue;
-      if(/\d/.test(k)) continue;
-      if(STOP.has(k)) continue;
-      terms.push({raw, base, startIdx:i, endIdx:i+len});
-    }
-  }
-  return terms;
+function scoreWord(globalText, sentText, sentStart, cand){
+  const L=140,R=160;
+  const ctx = globalText.slice(Math.max(0,cand.start-L), Math.min(globalText.length, cand.end+R));
+  let s=0;
+  s += Math.min(1.4, Math.log2(cand.base.length+1)/1.5);
+  if(PROCESS_HINT.test(cand.base)) s+=0.5;
+  if(WHY_HINT.test(ctx))  s+=1.2;
+  if(HOW_HINT.test(ctx))  s+=1.2;
+  if(WHEN_HINT.test(ctx)) s+=1.0;
+  if(WHERE_HINT.test(ctx))s+=1.0;
+  if(WHO_HINT.test(ctx))  s+=0.8;
+  if(/그래서|따라서|결과적으로|그 결과|이를 통해|이 과정에서|먼저|다음으로|마지막으로/.test(sentText)) s+=0.6;
+  const headBefore = globalText.slice(sentStart, cand.start);
+  if(/^\s*(\d{1,3}[\.|)]|\([0-9]{1,3}\)|[A-Za-z][\.|)]|\([A-Za-z]\))/.test(headBefore.trimStart())) s+=0.5;
+  s += Math.random()*0.10;
+  return s;
 }
-function termPositions(text, base){
-  const out=[]; const re=new RegExp(base.replace(/[.*+?^${}()|[\]\\]/g,'\\$&'), 'g');
-  let m; while((m=re.exec(text))){
-    const s=m.index, e=s+base.length; out.push([s,e]);
-  } return out;
-}
-function scoreTerms(text, terms){
-  const nodes=new Map();
-  terms.forEach(t=>{
-    const key=t.base;
-    if(!nodes.has(key)) nodes.set(key,{score:1,freq:0});
-    nodes.get(key).freq++;
-  });
-  const sents=sentencesIdx(text);
-  const sentHit=new Map();
-  for(const [k,n] of nodes){
-    let hits=0;
-    for(const [s,e] of sents){ if(text.slice(s,e).includes(k)) hits++; }
-    sentHit.set(k, Math.max(1,hits));
-  }
-  for(const [k,n] of nodes){
-    const lenBoost = Math.min(1.4, Math.log2(k.length+1)/1.5);
-    const idf = 1/Math.sqrt(sentHit.get(k)||1);
-    n.score = n.freq * lenBoost * idf;
-  }
-  for(const [k,n] of nodes){
-    const poss=termPositions(text,k);
-    let ctxBoost=0;
-    for(const [s,e] of poss){
-      const L=140, R=160;
-      const ctx=text.slice(Math.max(0,s-L), Math.min(text.length, e+R));
-      if(FIVEW1H_HINTS.some(h=>ctx.includes(h))) ctxBoost+=0.8;
-      if(METHOD.test(ctx)) ctxBoost+=0.6;
-      if(TIME.test(ctx)) ctxBoost+=0.6;
-      if(PROC.test(ctx)) ctxBoost+=0.6;
-      const prevNL=text.lastIndexOf('\n', s);
-      const head=text.slice(prevNL+1, s);
-      if(/^\s*(\d{1,3}[\.|)]|\([0-9]{1,3}\)|[A-Za-z][\.|)]|\([A-Za-z]\))/.test(head)) ctxBoost+=0.5;
-    }
-    n.score += Math.min(2.0, ctxBoost);
-  }
-  return nodes;
-}
-function chooseItemsAdvanced(text, targetCount, maxPerSentence, nChoice){
-  const toks=tokenize(text);
-  const terms=tokensToTerms(toks);
-  const nodeMap=scoreTerms(text, terms);
-  const ranked=[...nodeMap.entries()].sort((a,b)=>b[1].score-a[1].score);
-  const sents=sentencesIdx(text);
-  function sentBucket(pos){ let i=0; while(i<sents.length && pos>=sents[i][1]) i++; return i; }
-  const usedSpans=[], per=new Map(), items=[];
-  for(const [base,info] of ranked){
-    const poss=termPositions(text, base);
-    for(const [s,e] of poss){
-      const b=sentBucket(s); const c=per.get(b)||0;
-      if(c>=maxPerSentence) continue;
-      if(usedSpans.some(([us,ue])=> !(e<=us || s>=ue))) continue;
-      items.push({answer:base, pos:s, len:base.length, rawSpan:[s,e]});
-      usedSpans.push([s,e]); per.set(b,c+1);
-      if(items.length>=targetCount) break;
-    }
-    if(items.length>=targetCount) break;
-  }
-  const hasByS=new Map(); items.forEach(it=>{ const b=sentBucket(it.pos); hasByS.set(b,(hasByS.get(b)||0)+1); });
+
+function chooseItemsSequential(text, hardMax, perSentCap){
+  const sents = sentencesIdx(text);
+  const finalItems=[];
+  const globalUsedSpans=[];
   for(let si=0; si<sents.length; si++){
-    if(!hasByS.get(si)){
-      const [s,e]=sents[si];
-      let best=null;
-      for(const [base,info] of ranked){
-        const poss=termPositions(text, base);
-        for(const [ps,pe] of poss){
-          if(ps>=s && pe<=e){
-            if(usedSpans.some(([us,ue])=> !(pe<=us || ps>=ue))) continue;
-            const cand={answer:base,pos:ps,len:base.length,rawSpan:[ps,pe],sc:info.score};
-            if(!best || cand.sc>best.sc) best=cand;
+    const [s,e]=sents[si];
+    const sentText = text.slice(s,e);
+    const toks = tokenizeWithPos(sentText, s);
+    const cands  = genCandidates(toks);
+    const scored = cands.map(p=>({...p,score:scoreWord(text, sentText, s, p)}))
+                        .sort((a,b)=>b.score-a.score || a.start-b.start);
+
+    const takenThisSent=[];
+    let addedInSent=0;
+    for(const cand of scored){
+      if(finalItems.length>=hardMax) break;
+      if(takenThisSent.some(([cs,ce])=>!(cand.end<=cs || cand.start>=ce))) continue;
+      if(globalUsedSpans.some(([gs,ge])=>!(cand.end<=gs || cand.start>=ge))) continue;
+      finalItems.push({answer:cand.base,pos:cand.start,len:cand.base.length,rawSpan:[cand.start,cand.end]});
+      takenThisSent.push([cand.start,cand.end]);
+      globalUsedSpans.push([cand.start,cand.end]);
+      addedInSent++;
+      if(addedInSent>=perSentCap) break;
+    }
+    if(addedInSent===0 && scored.length){
+      const cand=scored[0];
+      if(!globalUsedSpans.some(([gs,ge])=>!(cand.end<=gs || cand.start>=ge))){
+        finalItems.push({answer:cand.base,pos:cand.start,len:cand.base.length,rawSpan:[cand.start,cand.end]});
+        globalUsedSpans.push([cand.start,cand.end]);
+      }
+    }
+    if(finalItems.length>=hardMax) break;
+  }
+  return finalItems;
+}
+
+function buildDistractors(allItems){
+  const bases=[...new Set(allItems.map(it=>it.answer))];
+  function dsPool(ans){
+    const al=ans.length;
+    const pool=bases.filter(b=>b!==ans && Math.abs(b.length-al)<=Math.max(2,Math.floor(al*0.4)));
+    return pool;
+  }
+  return allItems.map(it=>{
+    const pool=dsPool(it.answer).sort(()=>Math.random()-0.5);
+    return {...it, distractors:pool.slice(0,3)};
+  });
+}
+function deStreak(items){
+  if(items.length<3) return items;
+  const arr=items.slice();
+  for(let i=1;i<arr.length;i++){
+    if(arr[i].answer===arr[i-1].answer){
+      let j=i+1;
+      while(j<arr.length && arr[j].answer===arr[i].answer) j++;
+      if(j<arr.length){
+        const tmp=arr[i]; arr[i]=arr[j]; arr[j]=tmp;
+      }else{
+        for(let k=i-2;k>=0;k--){
+          if(arr[k].answer!==arr[i].answer){
+            const tmp=arr[i]; arr[i]=arr[k]; arr[k]=tmp; break;
           }
         }
       }
-      if(best){ items.push(best); usedSpans.push(best.rawSpan); hasByS.set(si,1); }
     }
   }
-  const bases=ranked.map(([b,_])=>b);
-  function dsPool(ans){
-    const al=ans.length;
-    return bases.filter(b=>b!==ans && Math.abs(b.length-al)<=Math.max(2,Math.floor(al*0.4))).slice(0,40);
+  for(let i=1;i<arr.length;i++){
+    if(arr[i].answer===arr[i-1].answer){
+      const idx = arr.findIndex((x,ix)=>ix!==i && ix!==i-1 && x.answer!==arr[i].answer);
+      if(idx> -1){ const t=arr[i]; arr[i]=arr[idx]; arr[idx]=t; }
+    }
   }
-  return items.map(it=>{
-    const pool=dsPool(it.answer).sort(()=>Math.random()-0.5);
-    return {...it, distractors: pool.slice(0, Math.max(1, nChoice-1))};
-  });
+  return arr;
 }
 
-// Rendering
 function renderRichWithBlank(raw, item, snippet){
   const before = raw.slice(0, item.pos);
   const after  = raw.slice(item.pos + item.len);
@@ -474,7 +520,6 @@ function renderRichWithBlank(raw, item, snippet){
     return safe(before) + '<mark>____</mark>' + safe(after);
   }
 }
-
 function renderChoices(container, item, nChoice, onPick){
   container.innerHTML='';
   const opts=[item.answer, ...item.distractors].sort(()=>Math.random()-0.5).slice(0, Math.max(2,nChoice));
@@ -502,20 +547,21 @@ function startQuiz(wrongOnly=false){
 
   if($('autoTune').checked){
     const len=RAW.length;
-    const holes = len<600? 12 : len<1200? 20 : len<2400? 30 : 40;
+    const holes = len<600? 18 : len<1200? 28 : len<2400? 40 : 60;
     $('holes').value=holes;
-    $('perSent').value = len<1200? 1: 2;
   }
-  const maxPerSentence = Math.max(1, Math.min(2, +$('perSent').value||1));
-  const hardMax = Math.max(4, Math.min(120, +$('holes').value||24));
+
+  const hardMax = Math.max(4, Math.min(200, +$('holes').value||24));
+  const perSentCap = Math.max(1, Math.min(6, +$('perSent').value||3));
   const nChoice = Math.max(2, Math.min(6, +$('nchoice').value||4));
-  const proLocal = $('proLocal').checked;
 
   setDiag('문항 구성…');
-  let items = proLocal? chooseItemsAdvanced(RAW, hardMax, maxPerSentence, nChoice)
-                      : simpleItems(RAW, hardMax, maxPerSentence, nChoice);
 
+  let items = chooseItemsSequential(RAW, hardMax, perSentCap);
   if(!items.length){ alert('만들 수 있는 문항이 없습니다.'); return; }
+
+  items = buildDistractors(items);
+  items = deStreak(items);
 
   qpassagePreview.innerHTML = renderRichWithBlank(RAW, items[0], $('snippetMode').checked);
   renderChoices(choicesPreview, items[0], nChoice, ()=>{});
@@ -524,7 +570,6 @@ function startQuiz(wrongOnly=false){
   QUE = items;
   show('quiz'); renderNext();
 }
-
 function renderNext(){
   const nChoice = Math.max(2, +$('nchoice').value||4);
   if(!QUE.length){
@@ -533,13 +578,15 @@ function renderNext(){
   const cur=QUE[0];
   const useSnippet = $('snippetMode').checked;
   const qp = $('qpassage');
+
   qp.innerHTML = renderRichWithBlank(RAW, cur, useSnippet);
-  // center the blank on first render
+
   const mark = qp.querySelector('mark');
   if(mark){
     const top = mark.offsetTop - (qp.clientHeight/2) + 24;
     qp.scrollTo({top: Math.max(0, top)});
   }
+
   renderChoices($('choices'), cur, nChoice, (correct)=>{
     TOTAL++; if(correct) CORR++; else WRONG.push(cur);
     QUE.shift(); updateProg(); saveSession(); renderNext();
@@ -605,40 +652,13 @@ if(!localStorage.getItem('notes_index')) setIndex([]);
 renderHome();
 show('home');
 
-// legacy simpleItems (fallback)
-function simpleItems(text, targetCount, maxPerSentence, nChoice){
-  const tokens=[]; const re=/[^\s]+/g; let m;
-  while((m=re.exec(text))){
-    const raw=m[0], start=m.index;
-    const base=stripJosa(raw); const k=base.toLowerCase();
-    if(!base || base.length<2) continue; if(/\d/.test(k)) continue; if(STOP.has(k)) continue;
-    tokens.push({raw,base,start,end:start+raw.length});
-  }
-  const scored=tokens.map(t=>{
-    let s= t.base.length*0.08;
-    const L=100, R=120, st=Math.max(0,t.start-L), en=Math.min(text.length,t.end+R);
-    const ctx=text.slice(st,en);
-    if(FIVEW1H_HINTS.some(h=>ctx.includes(h))) s+=0.6;
-    if(METHOD.test(ctx)) s+=0.4;
-    if(TIME.test(ctx)) s+=0.4;
-    if(PROC.test(ctx)) s+=0.4;
-    return {...t,score:s};
-  }).sort((a,b)=>b.score-a.score || a.start-b.start);
-  const sents=sentencesIdx(text);
-  function sentBucket(pos){ let i=0; while(i<sents.length && pos>=sents[i][1]) i++; return i; }
-  const per=new Map(), items=[];
-  for(const t of scored){
-    const b=sentBucket(t.start); const c=per.get(b)||0;
-    if(c>=maxPerSentence) continue;
-    items.push({answer:t.base,pos:t.start,len:t.base.length,rawSpan:[t.start,t.end],distractors:[]});
-    if(items.length>=targetCount) break;
-  }
-  return items;
+function arrayBufferToBase64(buffer){
+  let binary=''; const bytes=new Uint8Array(buffer);
+  const len=bytes.byteLength; for(let i=0;i<len;i++){ binary += String.fromCharCode(bytes[i]); }
+  return btoa(binary);
 }
 
-// helpers used above defined in scope
-function escapeHtml(s){ return (s||'').replace(/[&<>"]/g, m=>({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[m])); }
-})();
+})(); // IIFE
 </script>
 </body>
 </html>
