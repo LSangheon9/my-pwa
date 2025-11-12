@@ -2,7 +2,7 @@
 <html lang="ko">
 <head>
 <meta charset="utf-8">
-<title>Mint</title>
+<title>Mint v29</title>
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
 <style>
 :root{
@@ -104,7 +104,7 @@ textarea{width:100%;height:240px;background:var(--chip);color:var(--text);border
           <b id="brand">Mint</b>
         </div>
         <div style="display:flex;gap:8px;align-items:center">
-          <span class="badge"><span id="gptDot" class="dot"></span><span id="gptTxt">GPT 꺼짐</span></span>
+          <span class="badge"><span id="gptDot" class="dot badc"></span><span id="gptTxt">GPT 꺼짐</span></span>
           <button id="deleteBtn" class="btn ghost" type="button">삭제</button>
           <button id="saveBtn" class="btn ghost" type="button">저장</button>
           <button id="genBtn" class="btn" type="button">생성</button>
@@ -124,24 +124,12 @@ textarea{width:100%;height:240px;background:var(--chip);color:var(--text);border
 
       <div class="divider"></div>
 
-      <!-- 설정 -->
+      <!-- 설정 (v29는 모든 단어 모드이므로 간소화) -->
       <div class="row tiny" style="gap:14px">
-        <label><input id="autoTune" type="checkbox" checked> 자동설정(길이 기반)</label>
-        <label><input id="proLocal" type="checkbox" checked> 고급 로컬 엔진+</label>
-        <label><input id="snippetMode" type="checkbox"> 스니펫 모드(양쪽 맥락)</label>
+        <label><input id="snippetMode" type="checkbox" checked> 스니펫 모드(양쪽 맥락)</label>
       </div>
-      <div class="row tiny">최대 문제 수 <input id="holes" type="number" value="24" min="4" max="200" style="width:80px"> 개</div>
-      <div class="row tiny">문장당 최대 빈칸 (상한)<input id="perSent" type="number" value="3" min="1" max="6" style="width:80px"> 개</div>
       <div class="row tiny">선택지 개수 <input id="nchoice" type="number" value="4" min="2" max="6" style="width:80px"> 개</div>
-      <div class="row tiny">
-        <label><input id="useLLM" type="checkbox"> ChatGPT 사용 (맥락 강화)</label>
-        <input id="llmKey" type="password" placeholder="OpenAI API 키" style="flex:1; min-width:220px">
-        <select id="llmModel">
-          <option value="gpt-4.1-mini">gpt-4.1-mini</option>
-          <option value="gpt-4o-mini">gpt-4o-mini</option>
-        </select>
-      </div>
-      <div id="autoNote" class="tiny" style="color:#94a3b8"></div>
+      <div id="autoNote" class="tiny" style="color:#94a3b8">v29: 문장별로 **모든 단어**를 순서대로 빈칸으로 출제합니다. (구두점/공백 제외)</div>
 
       <div class="divider"></div>
 
@@ -210,6 +198,7 @@ textarea{width:100%;height:240px;background:var(--chip);color:var(--text);border
 const $=id=>document.getElementById(id);
 const screens={home:$('home'), edit:$('edit'), quiz:$('quiz')};
 function show(name){ for(const k in screens){ screens[k].classList.toggle('show', k===name); } }
+function toast(msg){ const t=$('toast'); t.textContent=msg; t.classList.add('show'); setTimeout(()=>t.classList.remove('show'),1100); }
 
 // ----- State -----
 let RAW="", QUE=[], TOTAL=0, CORR=0, WRONG=[], currentId=null, sessionId=null;
@@ -217,13 +206,15 @@ let images=[], galleryIdx=0, allowImages=false;
 const titleEl=$('title'), brand=$('brand'), quizTitle=$('quizTitle'), src=$('src');
 const qpassage=$('qpassage'), qpassagePreview=$('qpassagePreview'), choices=$('choices'), choicesPreview=$('choicesPreview');
 const stats=$('stats'), progress=$('progress'), statsPreview=$('statsPreview'), diag=$('diag');
-const gptDot=$('gptDot'), gptTxt=$('gptTxt');
-function toast(msg){ const t=$('toast'); t.textContent=msg; t.classList.add('show'); setTimeout(()=>t.classList.remove('show'),1100); }
-function setDiag(t){ diag.textContent='상태: '+t; }
-function updateGPTBadge(){const on=$('useLLM').checked && !!$('llmKey').value.trim(); gptDot.className='dot '+(on?'okc':'badc'); gptTxt.textContent=on?'GPT 켜짐':'GPT 꺼짐';}
-$('useLLM').addEventListener('change',updateGPTBadge); $('llmKey').addEventListener('input',updateGPTBadge); updateGPTBadge();
 
 // ----- Home List -----
+function escapeHtml(s){ return (s||'').replace(/[&<>"]/g, m=>({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[m])); }
+function safeRich(s){
+  let out=escapeHtml(s||"");
+  out=out.replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>');
+  out=out.replace(/&lt;(b|strong)&gt;/gi,'<$1>').replace(/&lt;\/(b|strong)&gt;/gi,'</$1>');
+  return out;
+}
 function getIndex(){ try{ return JSON.parse(localStorage.getItem('notes_index')||'[]')||[]; }catch(e){ return []; } }
 function setIndex(arr){ localStorage.setItem('notes_index', JSON.stringify(arr||[])); }
 function hasSession(noteId){ return !!localStorage.getItem('session_'+noteId); }
@@ -250,15 +241,6 @@ function renderHome(){
     list.append(wrap);
   });
 }
-function escapeHtml(s){ return (s||'').replace(/[&<>"]/g, m=>({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[m])); }
-function safeRich(s){
-  let out=escapeHtml(s||"");
-  out=out.replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>');
-  out=out.replace(/&lt;(b|strong)&gt;/gi,'<$1>').replace(/&lt;\/(b|strong)&gt;/gi,'</$1>');
-  return out;
-}
-
-// ----- Save / Open / Delete -----
 function saveNote(){
   const title=titleEl.value.trim()||'(제목 없음)'; const content=src.value;
   if(!content.trim()){ alert('내용이 비어 있습니다.'); return; }
@@ -286,23 +268,23 @@ function openNote(id){
   RAW=""; QUE=[]; TOTAL=0; CORR=0; WRONG=[];
   $('imgRow').style.display = allowImages? 'flex':'none';
   $('imgCount').textContent = `첨부된 이미지 ${images.length}장`;
-  brand.textContent=rec.title||'Mint'; quizTitle.textContent=brand.textContent;
-  qpassagePreview.textContent='여기에 빈칸 지문이 표시됩니다.'; choicesPreview.innerHTML=''; statsPreview.textContent='';
-  setDiag('노트 로드됨'); show('edit');
+  $('brand').textContent=rec.title||'Mint'; $('quizTitle').textContent=$('brand').textContent;
+  qpassagePreview.textContent='여기에 빈칸 지문이 표시됩니다.'; choicesPreview.innerHTML=''; $('statsPreview').textContent='';
+  $('diag').textContent='상태: 노트 로드됨'; show('edit');
 }
 $('deleteBtn').onclick=()=>{ if(currentId){ deleteNote(currentId); show('home'); } else { alert('현재 노트가 없습니다.'); } };
 
-// ----- Session (autosave/restore) -----
+// ----- Session -----
 function makeSessionId(){
   if(currentId) return 'session_'+currentId;
-  const t=(titleEl.value||'').slice(0,64), c=(src.value||'').slice(0,256);
+  const t=($('title').value||'').slice(0,64), c=($('src').value||'').slice(0,256);
   let h=0, s=t+'|'+c; for(let i=0;i<s.length;i++){ h=((h<<5)-h)+s.charCodeAt(i); h|=0; }
   return 'session_tmp_'+(h>>>0);
 }
 function saveSession(){
   if(!RAW || !QUE) return;
   sessionId = makeSessionId();
-  const payload={ id:sessionId, noteId:currentId||null, title:titleEl.value||'Mint', raw:RAW, que:QUE, total:TOTAL, corr:CORR,
+  const payload={ id:sessionId, noteId:currentId||null, title:$('title').value||'Mint', raw:RAW, que:QUE, total:TOTAL, corr:CORR,
                   nchoice:+$('nchoice').value||4, ts:Date.now(), images, allowImages };
   try{ localStorage.setItem(sessionId, JSON.stringify(payload)); toast('진행 저장됨'); }catch(e){}
 }
@@ -315,7 +297,7 @@ function tryResumePrompt(){
     const payload=JSON.parse(s);
     RAW=payload.raw; QUE=payload.que||[]; TOTAL=payload.total||0; CORR=payload.corr||0;
     images=payload.images||[]; allowImages=payload.allowImages;
-    brand.textContent=payload.title||'Mint'; quizTitle.textContent=payload.title||'Mint';
+    $('brand').textContent=payload.title||'Mint'; $('quizTitle').textContent=payload.title||'Mint';
     show('quiz'); renderNext(); setTimeout(()=>toast('이어하기 로드됨'), 10);
     return true;
   }
@@ -326,27 +308,15 @@ function resumeSession(noteId){
   if(!s){ alert('이어할 세션이 없습니다.'); return; }
   const payload=JSON.parse(s);
   currentId=noteId;
-  titleEl.value=payload.title||''; src.value=payload.raw||'';
+  $('title').value=payload.title||''; $('src').value=payload.raw||'';
   RAW=payload.raw; QUE=payload.que||[]; TOTAL=payload.total||0; CORR=payload.corr||0;
   images=payload.images||[]; allowImages=payload.allowImages;
-  brand.textContent=payload.title||'Mint'; quizTitle.textContent=payload.title||'Mint';
+  $('brand').textContent=payload.title||'Mint'; $('quizTitle').textContent=payload.title||'Mint';
   show('quiz'); renderNext(); toast('이어하기 로드됨');
 }
 
-// ===== Cloze Engine v28f-balance (only method changed) =====
-const STOP=new Set((`가 각 또한 그리고 그러나 그래서 그런데 또는 및 즉 따라서 하지만 이는 이를 이가 그의 그녀 그들
-은 는 이 가 을 를 의 에 에서 으로 와 과 도 만 보다 처럼 대해 대한 대해서 등이 등등 있다 없다 하다 되다 a an the and or but so of to in on at for with from by as is are was were be been being this that those these it its their them they he she we you`).trim().split(/\s+/));
-
-const JOSA=['으로써','으로서','이지만','지만','이라도','라도','이나','나','이며','에서','에게','께서','부터','까지','처럼','보다','만큼','조차','마저','밖에','으로','로','이고','이며','과','와','을','를','은','는','이','가','의','도','만','랑','하고','동안','후에','이후','이전에','때','동안에'];
-const VERB_END=['한다','된다','하였다','했다','하며','하여','하면','하도록','되고','되며','되면','되어','되는','시키다','시킨다','촉진한다','억제한다','유발한다','형성한다','전달한다','합성한다','분해한다','저장한다','흡수한다','분비한다','유리한다','전환한다','증가한다','감소한다'];
-const PROCESS_HINT=/촉진|억제|유발|형성|전달|합성|분해|저장|흡수|분비|유리|전환|조절|변화|증가|감소|유지/;
-const WHY_HINT=/왜|이유|원인|때문|결과적으로|그 결과|따라서|그래서|결국/;
-const HOW_HINT=/어떻게|방식|방법|절차|경로|수단|과정을 통해|하여|함으로써|촉진|억제|조절|유발|형성|전달|합성|분해|진행/;
-const WHEN_HINT=/언제|초기|중기|말기|동안|이후|이전에|후에|\d{1,4}\s*(년|월|일|시|분)|봄|여름|가을|겨울/;
-const WHERE_HINT=/어디서|어디에서|위치|부위|영역|장기|조직|내에서|밖에서|핵|세포질|혈액|혈관|간|췌장|근육|뇌/;
-const WHO_HINT=/누가|어떤 세포|어떤 호르몬|효소|단백질|기관|조직|세포/;
-
-function sentencesIdx(text){
+// ===== v29 Cloze Engine: sentence-by-sentence, blank EVERY WORD (no skip), in order =====
+function sentenceBounds(text){
   const seps=/[\.?!\n\r。！？…]/g;
   const idxs=[0]; let m;
   while((m=seps.exec(text))){ idxs.push(m.index+1); }
@@ -359,139 +329,63 @@ function sentencesIdx(text){
   }
   return out;
 }
-function stripPunct(t){ return t.replace(/^[\s\"'“”‘’()\[\]{},.?!;:]+|[\s\"'“”‘’()\[\]{},.?!;:]+$/g,''); }
-function stripJosa(w){
-  let t=stripPunct(w);
-  const sorted=[...JOSA].sort((a,b)=>b.length-a.length);
-  for(const s of sorted){
-    if(t.length>s.length && t.endsWith(s)){ t=t.slice(0,-s.length); break; }
-  }
-  return t;
-}
-function stripVerbEnding(w){
-  let t=w;
-  const sorted=[...VERB_END].sort((a,b)=>b.length-a.length);
-  for(const s of sorted){ if(t.length>s.length && t.endsWith(s)){ t=t.slice(0,-s.length); break; } }
-  if(t.endsWith('하다')) t=t.slice(0,-2);
-  if(t.length<=1) t=w;
-  return t;
-}
-function tokenizeWithPos(text, offset){
+function tokenize(text, offset){
   const out=[];
-  const re=/[^\s]+/g;
-  let m;
+  const re=/(\s+|[^\s]+)/g; let m;
   while((m=re.exec(text))){
-    const raw=m[0];
-    out.push({raw,start:offset+m.index,end:offset+m.index+raw.length});
+    const chunk=m[0], start=offset+m.index, end=start+chunk.length;
+    if(/^\s+$/.test(chunk)){ out.push({raw:chunk,start,end,kind:'space'}); }
+    else{
+      // break leading/trailing punctuation as separate tokens
+      let s=0,e=chunk.length;
+      const isPunct=c=>/[.,!?:;'\"“”‘’()\[\]{}\-–—~·•…_+*/=\\<>%@#^`|]/.test(c);
+      while(s<e && isPunct(chunk[s])){ out.push({raw:chunk[s],start:start+s,end:start+s+1,kind:'punct'}); s++; }
+      while(e-1>=s && isPunct(chunk[e-1])) e--;
+      if(s<e){
+        const core=chunk.slice(s,e);
+        // define "word" as anything with letter/number/Hangul
+        if(/[A-Za-z0-9\uAC00-\uD7A3]/.test(core)){
+          out.push({raw:core,start:start+s,end:start+e,kind:'word'});
+        }else{
+          out.push({raw:core,start:start+s,end:start+e,kind:'other'});
+        }
+      }
+      for(let k=e;k<chunk.length;k++){ out.push({raw:chunk[k],start:start+k,end:start+k+1,kind:'punct'}); }
+    }
   }
   return out;
 }
-function genCandidates(tokens){
-  const out=[];
-  for(const t of tokens){
-    let base=stripJosa(t.raw);
-    base=stripVerbEnding(base);
-    const k=base.toLowerCase();
-    if(!base || base.length<2) continue;
-    if(/\d/.test(k)) continue;
-    if(STOP.has(k)) continue;
-    out.push({raw:t.raw, base, start:t.start, end:t.end});
-  }
-  return out;
-}
-function scoreWord(globalText, sentText, sentStart, cand){
-  const L=140,R=160;
-  const ctx = globalText.slice(Math.max(0,cand.start-L), Math.min(globalText.length, cand.end+R));
-  let s=0;
-  // 길이/명사 가중
-  s += Math.min(1.6, Math.log2(cand.base.length+1)/1.3);
-  // 과정·행위
-  if(PROCESS_HINT.test(cand.base)) s+=0.7;
-  // 5W1H 문맥
-  if(WHY_HINT.test(ctx))  s+=1.2;
-  if(HOW_HINT.test(ctx))  s+=1.2;
-  if(WHEN_HINT.test(ctx)) s+=1.0;
-  if(WHERE_HINT.test(ctx))s+=1.0;
-  if(WHO_HINT.test(ctx))  s+=0.8;
-  // 연결어/순서 신호
-  if(/그래서|따라서|결과적으로|그 결과|이를 통해|먼저|다음으로|마지막으로/.test(sentText)) s+=0.6;
-  // 문장 머리 번호/라벨
-  const headBefore = globalText.slice(sentStart, cand.start);
-  if(/^\s*(\d{1,3}[\.|)]|\([0-9]{1,3}\)|[A-Za-z][\.|)]|\([A-Za-z]\))/.test(headBefore.trimStart())) s+=0.5;
-  // 미세 랜덤
-  s += Math.random()*0.08;
-  return s;
-}
-
-// --- 핵심 변경: 문장별 상위 후보를 뽑고, 라운드로빈으로 합치기 (연속 개념 편중 방지 + 전 문장 커버) ---
-function chooseBalanced(text, hardMax, perSentCap){
-  const sents = sentencesIdx(text);
-  const per = []; // 각 문장 큐
+function buildAllWordQueue(text){
+  const sents=sentenceBounds(text);
+  const items=[];
   for(let si=0; si<sents.length; si++){
     const [s,e]=sents[si];
-    const sentText = text.slice(s,e);
-    const toks = tokenizeWithPos(sentText, s);
-    const cands  = genCandidates(toks);
-    const scored = cands.map(p=>({...p,score:scoreWord(text, sentText, s, p)}))
-                        .sort((a,b)=>b.score-a.score || a.start-b.start);
-    // 문장당 상위 N만
-    per.push(scored.slice(0, Math.max(1, perSentCap)));
-  }
-  // 라운드로빈 머지
-  const merged=[];
-  let added=0, ptr=0;
-  const totalS = per.length;
-  while(added<hardMax){
-    let progressed=false;
-    for(let k=0;k<totalS;k++){
-      const si=(ptr+k)%totalS;
-      if(per[si] && per[si].length){
-        const it=per[si].shift();
-        merged.push({answer:it.base,pos:it.start,len:it.base.length,rawSpan:[it.start,it.end], sentIdx:si});
-        added++; progressed=true;
-        if(added>=hardMax) break;
+    const toks=tokenize(text.slice(s,e), s);
+    for(const t of toks){
+      if(t.kind==='word'){ // skip spaces/punct
+        items.push({answer:t.raw, pos:t.start, len:t.raw.length, sentIdx:si});
       }
     }
-    if(!progressed) break;
-    ptr++;
   }
-  // 중복 허용하되, 같은 정답이 즉시 연속되지 않도록 뒤에서 조정
-  return merged;
+  return items;
 }
-
-function buildDistractors(allItems){
-  const bases=[...new Set(allItems.map(it=>it.answer))];
-  function dsPool(ans){
+function buildDistractorsAll(items){
+  const vocab=[...new Set(items.map(it=>it.answer))];
+  function poolFor(ans){
     const al=ans.length;
-    const pool=bases.filter(b=>b!==ans && Math.abs(b.length-al)<=Math.max(2,Math.floor(al*0.4)));
+    const pool=vocab.filter(v=>v!==ans && Math.abs(v.length-al)<=Math.max(2, Math.floor(al*0.5)));
     return pool;
   }
-  return allItems.map(it=>{
-    const pool=dsPool(it.answer).sort(()=>Math.random()-0.5);
+  return items.map(it=>{
+    let pool=poolFor(it.answer).sort(()=>Math.random()-0.5);
+    if(pool.length<3){
+      // fall back to any different words
+      const extras=vocab.filter(v=>v!==it.answer && !pool.includes(v)).sort(()=>Math.random()-0.5);
+      pool = pool.concat(extras).slice(0,3);
+    }
     return {...it, distractors:pool.slice(0,3)};
   });
 }
-function deStreak(items, window=2){
-  const arr=items.slice();
-  for(let i=1;i<arr.length;i++){
-    if(arr[i].answer===arr[i-1].answer){
-      // 가까운 범위 내 다른 정답과 교체
-      let swapped=false;
-      for(let j=i+1;j<Math.min(arr.length, i+1+8);j++){
-        if(arr[j].answer!==arr[i].answer){
-          const tmp=arr[i]; arr[i]=arr[j]; arr[j]=tmp; swapped=true; break;
-        }
-      }
-      if(!swapped){
-        for(let k=i-2;k>=0;k--){
-          if(arr[k].answer!==arr[i].answer){ const t=arr[i]; arr[i]=arr[k]; arr[k]=t; break; }
-        }
-      }
-    }
-  }
-  return arr;
-}
-
 function renderRichWithBlank(raw, item, snippet){
   const before = raw.slice(0, item.pos);
   const after  = raw.slice(item.pos + item.len);
@@ -523,39 +417,28 @@ function renderChoices(container, item, nChoice, onPick){
         el.classList.add('no');
         [...container.children].forEach(n=>{ if(n.textContent===item.answer) n.classList.add('ok'); });
       }
-      setTimeout(()=>onPick(opt===item.answer), 160);
+      setTimeout(()=>onPick(opt===item.answer), 140);
     };
     container.appendChild(el);
   }
 }
 
 // ----- Quiz Flow -----
-function startQuiz(wrongOnly=false){
-  const text=src.value.trim(); if(!text){ alert('텍스트를 넣어주세요.'); return; }
+function startQuiz(){
+  const text=$('src').value.trim(); if(!text){ alert('텍스트를 넣어주세요.'); return; }
   RAW=text; TOTAL=0; CORR=0; WRONG=[];
-  const title=titleEl.value.trim()||'Mint'; brand.textContent=title; quizTitle.textContent=title;
+  $('brand').textContent=$('title').value.trim()||'Mint'; $('quizTitle').textContent=$('brand').textContent;
   sessionId=null;
   if(tryResumePrompt()) return;
 
-  if($('autoTune').checked){
-    const len=RAW.length;
-    const holes = len<600? 18 : len<1200? 28 : len<2400? 40 : 60;
-    $('holes').value=holes;
-  }
+  let items = buildAllWordQueue(RAW);
+  if(!items.length){ alert('출제할 단어가 없습니다.'); return; }
+  items = buildDistractorsAll(items);
 
-  const hardMax = Math.max(4, Math.min(200, +$('holes').value||24));
-  const perSentCap = Math.max(1, Math.min(6, +$('perSent').value||3));
+  // Preview
+  const useSnippet=$('snippetMode').checked;
   const nChoice = Math.max(2, Math.min(6, +$('nchoice').value||4));
-
-  setDiag('문항 구성(밸런스)…');
-
-  let items = chooseBalanced(RAW, hardMax, perSentCap);
-  if(!items.length){ alert('만들 수 있는 문항이 없습니다.'); return; }
-
-  items = buildDistractors(items);
-  items = deStreak(items, 2);
-
-  qpassagePreview.innerHTML = renderRichWithBlank(RAW, items[0], $('snippetMode').checked);
+  $('qpassagePreview').innerHTML = renderRichWithBlank(RAW, items[0], useSnippet);
   renderChoices(choicesPreview, items[0], nChoice, ()=>{});
   $('statsPreview').textContent=`미리보기 · 총 ${items.length}문항`;
 
@@ -572,7 +455,6 @@ function renderNext(){
   const qp = $('qpassage');
 
   qp.innerHTML = renderRichWithBlank(RAW, cur, useSnippet);
-
   const mark = qp.querySelector('mark');
   if(mark){
     const top = mark.offsetTop - (qp.clientHeight/2) + 24;
@@ -619,13 +501,12 @@ function showGalleryIdx(i){
 
 // ----- Navigation -----
 function newNoteCore(withImages){
-  currentId=null; titleEl.value=''; src.value=''; RAW=""; QUE=[]; TOTAL=0; CORR=0; WRONG=[]; sessionId=null;
+  currentId=null; $('title').value=''; $('src').value=''; RAW=""; QUE=[]; TOTAL=0; CORR=0; WRONG=[]; sessionId=null;
   images=[]; allowImages=!!withImages;
   $('imgRow').style.display = allowImages? 'flex':'none';
   $('imgCount').textContent = '첨부된 이미지 0장';
-  qpassagePreview.textContent='여기에 빈칸 지문이 표시됩니다.'; choicesPreview.innerHTML=''; statsPreview.textContent='';
-  brand.textContent='Mint'; quizTitle.textContent='Mint'; setDiag('새 노트');
-  show('edit');
+  qpassagePreview.textContent='여기에 빈칸 지문이 표시됩니다.'; choicesPreview.innerHTML=''; $('statsPreview').textContent='';
+  $('brand').textContent='Mint'; $('quizTitle').textContent='Mint'; $('diag').textContent='상태: 새 노트'; show('edit');
 }
 function newNote(){ $('newModal').classList.add('show'); }
 $('newTextOnly').onclick=()=>{ $('newModal').classList.remove('show'); newNoteCore(false); };
@@ -637,7 +518,7 @@ $('newFromHome').onclick=newNote;
 $('goHome1').onclick=()=>{ show('home'); renderHome(); };
 $('goHome2').onclick=()=>{ show('home'); renderHome(); };
 $('backToEdit').onclick=()=>{ show('edit'); };
-$('genBtn').onclick=()=> startQuiz(false);
+$('genBtn').onclick=()=> startQuiz();
 $('saveBtn').onclick=saveNote;
 
 if(!localStorage.getItem('notes_index')) setIndex([]);
