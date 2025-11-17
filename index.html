@@ -2,7 +2,7 @@
 <html lang="ko">
 <head>
 <meta charset="utf-8">
-<title>Mint v29</title>
+<title>Mint v29a</title>
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
 <style>
 :root{
@@ -124,12 +124,16 @@ textarea{width:100%;height:240px;background:var(--chip);color:var(--text);border
 
       <div class="divider"></div>
 
-      <!-- 설정 (v29는 모든 단어 모드이므로 간소화) -->
+      <!-- 설정 (v29a: 거의 모든 단어, 일부 불필요 단어 제외) -->
       <div class="row tiny" style="gap:14px">
         <label><input id="snippetMode" type="checkbox" checked> 스니펫 모드(양쪽 맥락)</label>
       </div>
       <div class="row tiny">선택지 개수 <input id="nchoice" type="number" value="4" min="2" max="6" style="width:80px"> 개</div>
-      <div id="autoNote" class="tiny" style="color:#94a3b8">v29: 문장별로 **모든 단어**를 순서대로 빈칸으로 출제합니다. (구두점/공백 제외)</div>
+      <div id="autoNote" class="tiny" style="color:#94a3b8">
+        v29a: 문장별로 <b>거의 모든 단어</b>를 순서대로 빈칸으로 출제합니다.<br>
+        단, <code>매우, 많이, 굉장히, 아주, 너무, 정말, 진짜, 되게, 상당히, 꽤, 무척, 참, 약간, 좀</code> 같은
+        <b>강조/정도 부사</b>는 자동으로 제외합니다.
+      </div>
 
       <div class="divider"></div>
 
@@ -315,7 +319,11 @@ function resumeSession(noteId){
   show('quiz'); renderNext(); toast('이어하기 로드됨');
 }
 
-// ===== v29 Cloze Engine: sentence-by-sentence, blank EVERY WORD (no skip), in order =====
+// ===== v29a Cloze Engine: sentence-by-sentence, almost every word, skip intensifiers =====
+const SKIP_WORDS = new Set([
+  '매우','많이','굉장히','아주','너무','정말','진짜','되게','상당히','꽤','무척','참','약간','좀'
+]);
+
 function sentenceBounds(text){
   const seps=/[\.?!\n\r。！？…]/g;
   const idxs=[0]; let m;
@@ -362,7 +370,10 @@ function buildAllWordQueue(text){
     const [s,e]=sents[si];
     const toks=tokenize(text.slice(s,e), s);
     for(const t of toks){
-      if(t.kind==='word'){ // skip spaces/punct
+      if(t.kind==='word'){
+        const base = t.raw.trim().toLowerCase();
+        if(!base) continue;
+        if(SKIP_WORDS.has(base)) continue; // 강조/정도 부사는 건너뛰기
         items.push({answer:t.raw, pos:t.start, len:t.raw.length, sentIdx:si});
       }
     }
